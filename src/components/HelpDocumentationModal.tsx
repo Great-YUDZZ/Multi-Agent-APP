@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { CubesLogo } from './CubesLogo';
+
 export type HelpTabType =
   | 'overview'
   | 'create-agent'
@@ -46,25 +48,25 @@ export const HelpDocumentationModal: React.FC<HelpDocumentationModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 font-sans select-none">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 font-sans select-none">
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.96 }}
-          transition={{ duration: 0.15 }}
-          className="bg-[#1e1e1e] border border-[#3c3c3c] rounded-lg shadow-2xl w-full max-w-4xl h-[600px] flex flex-col overflow-hidden text-[#cccccc]"
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          className="bg-[#131522]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl w-full max-w-4xl h-[600px] flex flex-col overflow-hidden text-[#e2e8f0]"
         >
           {/* Modal Header */}
-          <div className="h-12 bg-[#252526] border-b border-[#2d2d2d] px-5 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5">
-              <img src="/logo.png" alt="Logo" className="w-5 h-5 rounded-sm shadow-sm" />
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider">
+          <div className="h-14 bg-white/[0.03] border-b border-white/[0.08] px-6 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <CubesLogo size={26} withGlow={true} />
+              <h2 className="text-xs font-bold text-white tracking-wide uppercase">
                 Dokumentasi & Pusat Bantuan Multi-Agent Desktop
               </h2>
             </div>
             <button
               onClick={onClose}
-              className="text-[#858585] hover:text-white hover:bg-[#333333] p-1.5 rounded transition-colors"
+              className="text-[#94a3b8] hover:text-white hover:bg-white/10 p-1.5 rounded-xl transition-colors"
             >
               <X size={16} />
             </button>

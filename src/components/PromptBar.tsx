@@ -189,8 +189,8 @@ export const PromptBar: React.FC<PromptBarProps> = ({
         </div>
       )}
 
-      {/* Outer Prompt Container (VS Code Chat/Input panel) */}
-      <div className="bg-[#252526] border border-[#333333] focus-within:border-[#007fd4] rounded p-2.5 shadow-lg transition-colors">
+      {/* Outer Prompt Container */}
+      <div className="bg-[#141724]/90 border border-white/10 focus-within:border-indigo-500/50 rounded-2xl p-3 shadow-2xl backdrop-blur-md transition-all">
         {/* Hidden File Input for Attachments */}
         <input
           type="file"
@@ -206,27 +206,27 @@ export const PromptBar: React.FC<PromptBarProps> = ({
             {attachments.map((att) => (
               <div
                 key={att.id}
-                className="flex items-center gap-1.5 px-2 py-1 bg-[#1e1e1e] border border-[#3c3c3c] rounded text-xs text-[#cccccc] shadow-sm"
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.04] border border-white/10 rounded-xl text-xs text-[#cbd5e1] shadow-sm"
               >
                 {att.content.type === 'image' ? (
                   <img
                     src={att.content.base64}
                     alt={att.fileName}
-                    className="w-4 h-4 object-cover rounded shrink-0"
+                    className="w-4 h-4 object-cover rounded-md shrink-0"
                   />
                 ) : (
-                  <FileCode size={13} className="text-[#4ec9b0] shrink-0" />
+                  <FileCode size={13} className="text-[#38bdf8] shrink-0" />
                 )}
-                <span className="truncate max-w-[130px] font-mono text-[11px] text-[#cccccc]">
+                <span className="truncate max-w-[130px] font-mono text-[11px] text-[#cbd5e1]">
                   {att.fileName}
                 </span>
-                <span className="text-[10px] text-[#777777]">
+                <span className="text-[10px] text-[#64748b]">
                   ({Math.round(att.sizeBytes / 1024) || 1} KB)
                 </span>
                 <button
                   type="button"
                   onClick={() => handleRemoveAttachment(att.id)}
-                  className="hover:text-red-400 text-[#858585] ml-0.5 p-0.5 rounded cursor-pointer transition-colors"
+                  className="hover:text-red-400 text-[#64748b] ml-0.5 p-0.5 rounded-lg cursor-pointer transition-colors"
                 >
                   <X size={11} />
                 </button>
@@ -242,7 +242,7 @@ export const PromptBar: React.FC<PromptBarProps> = ({
           onKeyDown={handleKeyDown}
           placeholder="Ask anything, @ to mention, / for actions"
           rows={2}
-          className="w-full bg-[#1e1e1e] border border-[#3c3c3c] focus:border-[#007fd4] rounded p-2 outline-none text-xs text-[#cccccc] placeholder-[#858585] font-sans leading-relaxed resize-none"
+          className="w-full bg-black/25 border border-white/[0.06] focus:border-indigo-500/40 rounded-xl p-2.5 outline-none text-xs text-[#e2e8f0] placeholder-[#64748b] font-sans leading-relaxed resize-none transition-colors"
         />
 
         {/* Action Row */}
@@ -252,7 +252,7 @@ export const PromptBar: React.FC<PromptBarProps> = ({
             {/* + Agents Button */}
             <button
               onClick={onOpenAgentSelector}
-              className="flex items-center gap-1 px-2 py-1 bg-[#333333] hover:bg-[#3c3c3c] text-[#cccccc] hover:text-white rounded text-xs transition-colors border border-[#3c3c3c]"
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.05] hover:bg-white/[0.1] text-[#cbd5e1] hover:text-white rounded-xl text-xs transition-colors border border-white/10 shadow-sm"
             >
               <Plus size={12} />
               <span>Agents</span>
@@ -264,7 +264,7 @@ export const PromptBar: React.FC<PromptBarProps> = ({
                 <div
                   key={agent.id}
                   title={`${agent.name} (${agent.role})`}
-                  className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-white border border-[#252526] shadow cursor-pointer hover:scale-105 transition-transform"
+                  className="w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold text-white border border-[#141724] shadow cursor-pointer hover:scale-105 transition-transform"
                   style={{ backgroundColor: agent.color }}
                 >
                   {agent.initial}
@@ -272,39 +272,39 @@ export const PromptBar: React.FC<PromptBarProps> = ({
               ))}
             </div>
 
-            {/* Mode Switch: Plan / Build (VS Code Segmented Control) */}
-            <div className="flex items-center bg-[#1e1e1e] border border-[#333333] p-0.5 rounded text-xs ml-2">
+            {/* Mode Switch: Plan / Build */}
+            <div className="flex items-center bg-black/30 border border-white/10 p-0.5 rounded-xl text-xs ml-2">
               <button
                 onClick={() => onToggleMode('plan')}
-                className={`px-2.5 py-0.5 rounded text-xs transition-all ${
+                className={`px-3 py-1 rounded-lg text-xs transition-all ${
                   currentMode === 'plan'
-                    ? 'bg-[#0e639c] text-white font-medium'
-                    : 'text-[#858585] hover:text-[#cccccc]'
+                    ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold shadow-sm'
+                    : 'text-[#64748b] hover:text-[#cbd5e1]'
                 }`}
               >
                 Plan
               </button>
               <button
                 onClick={() => onToggleMode('build')}
-                className={`px-2.5 py-0.5 rounded text-xs transition-all ${
+                className={`px-3 py-1 rounded-lg text-xs transition-all ${
                   currentMode === 'build'
-                    ? 'bg-[#0e639c] text-white font-medium'
-                    : 'text-[#858585] hover:text-[#cccccc]'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold shadow-sm'
+                    : 'text-[#64748b] hover:text-[#cbd5e1]'
                 }`}
               >
                 Build
               </button>
             </div>
 
-            {/* Strategy Switch (Round-Robin vs Hierarchical) when in Plan mode */}
+            {/* Strategy Switch */}
             {currentMode === 'plan' && onToggleDiscussionStrategy && (
-              <div className="flex items-center bg-[#1e1e1e] border border-[#333333] p-0.5 rounded text-xs ml-1">
+              <div className="flex items-center bg-black/30 border border-white/10 p-0.5 rounded-xl text-xs ml-1">
                 <button
                   onClick={() => onToggleDiscussionStrategy('round-robin')}
-                  className={`px-2 py-0.5 rounded text-[11px] transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-[11px] transition-all ${
                     discussionStrategy === 'round-robin'
-                      ? 'bg-[#1e3a2f] text-[#4ec9b0] font-semibold'
-                      : 'text-[#858585] hover:text-[#cccccc]'
+                      ? 'bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30'
+                      : 'text-[#64748b] hover:text-[#cbd5e1]'
                   }`}
                   title="Strategi Round-Robin: Semua agent bergiliran + Moderator"
                 >
@@ -312,10 +312,10 @@ export const PromptBar: React.FC<PromptBarProps> = ({
                 </button>
                 <button
                   onClick={() => onToggleDiscussionStrategy('hierarchical')}
-                  className={`px-2 py-0.5 rounded text-[11px] transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-[11px] transition-all ${
                     discussionStrategy === 'hierarchical'
-                      ? 'bg-[#2a4365] text-[#90cdf4] font-semibold'
-                      : 'text-[#858585] hover:text-[#cccccc]'
+                      ? 'bg-sky-500/20 text-sky-300 font-semibold border border-sky-500/30'
+                      : 'text-[#64748b] hover:text-[#cbd5e1]'
                   }`}
                   title="Strategi Hierarchical: Manager delegasi ke Worker lalu rangkum"
                 >
@@ -331,24 +331,24 @@ export const PromptBar: React.FC<PromptBarProps> = ({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               title="Attach Code or Image Files"
-              className="p-1.5 text-[#858585] hover:text-[#cccccc] hover:bg-[#2a2d2e] rounded transition-colors cursor-pointer"
+              className="p-2 text-[#64748b] hover:text-[#cbd5e1] hover:bg-white/[0.06] rounded-xl transition-colors cursor-pointer"
             >
-              <Paperclip size={14} />
+              <Paperclip size={15} />
             </button>
 
             <button
               title="Voice Input"
-              className="p-1.5 text-[#858585] hover:text-white hover:bg-[#2a2d2e] rounded transition-colors"
+              className="p-2 text-[#64748b] hover:text-white hover:bg-white/[0.06] rounded-xl transition-colors"
             >
-              <Mic size={14} />
+              <Mic size={15} />
             </button>
 
             <button
               onClick={handleSend}
               disabled={(!text.trim() && attachments.length === 0) || disabled}
-              className="w-7 h-7 rounded bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#094771] disabled:bg-[#333333] disabled:text-[#666666] text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer"
+              className="w-8 h-8 rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 active:scale-95 disabled:opacity-40 text-white flex items-center justify-center transition-all shadow-md shadow-indigo-500/20 cursor-pointer"
             >
-              <ArrowRight size={14} />
+              <ArrowRight size={15} />
             </button>
           </div>
         </div>

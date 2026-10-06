@@ -93,70 +93,68 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="w-60 h-full bg-[#252526] border-r border-[#2d2d2d] flex flex-col justify-between select-none font-sans text-xs">
+    <aside className="w-60 h-full bg-[#0d0f18] border-r border-white/[0.08] flex flex-col justify-between select-none font-sans text-xs">
       {/* Top Section */}
-      <div className="p-2 space-y-3 flex-1 flex flex-col overflow-hidden">
-        {/* + New Session Button (VS Code Primary Action) */}
+      <div className="p-3 space-y-3.5 flex-1 flex flex-col overflow-hidden">
+        {/* + New Session Button */}
         <button
           onClick={onNewSession}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#007acc] text-white rounded text-xs font-normal transition-colors shadow-sm shrink-0"
+          className="w-full flex items-center justify-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 active:scale-[0.99] text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-indigo-500/20 shrink-0"
         >
           <Plus size={14} />
           <span>New Session</span>
         </button>
 
         {/* View Selection: Navigation Items */}
-        <div className="space-y-0.5 shrink-0">
-          <div className="text-[11px] font-bold text-[#bbbbbb] tracking-wider uppercase px-2 py-1">
+        <div className="space-y-1 shrink-0">
+          <div className="text-[10px] font-bold text-[#64748b] tracking-wider uppercase px-2 py-1">
             VIEWS
           </div>
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors ${
+            className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors ${
               activeTab === 'dashboard'
-                ? 'bg-[#37373d] text-white font-medium'
-                : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
+                ? 'bg-indigo-600/20 text-white font-medium border border-indigo-500/30'
+                : 'text-[#94a3b8] hover:bg-white/[0.05] hover:text-white'
             }`}
           >
-            <LayoutDashboard size={14} className="text-[#4ec9b0]" />
+            <LayoutDashboard size={14} className="text-[#38bdf8]" />
             <span>Dashboard</span>
           </button>
 
           <button
             onClick={() => setActiveTab('chat')}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors ${
+            className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors ${
               activeTab === 'chat'
-                ? 'bg-[#37373d] text-white font-medium'
-                : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
+                ? 'bg-indigo-600/20 text-white font-medium border border-indigo-500/30'
+                : 'text-[#94a3b8] hover:bg-white/[0.05] hover:text-white'
             }`}
           >
-            <div className="w-3.5 h-3.5 rounded-full bg-[#007acc] flex items-center justify-center text-[9px] text-white font-bold">
-              •
-            </div>
+            <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-sm" />
             <span>Current Workspace</span>
           </button>
 
           <button
             onClick={() => setActiveTab('history')}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors ${
+            className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors ${
               activeTab === 'history'
-                ? 'bg-[#37373d] text-white font-medium'
-                : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
+                ? 'bg-indigo-600/20 text-white font-medium border border-indigo-500/30'
+                : 'text-[#94a3b8] hover:bg-white/[0.05] hover:text-white'
             }`}
           >
-            <History size={14} className="text-[#858585]" />
+            <History size={14} className="text-[#64748b]" />
             <span>Session History</span>
           </button>
 
           <button
             onClick={() => setActiveTab('artifact')}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors ${
+            className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors ${
               activeTab === 'artifact'
-                ? 'bg-[#37373d] text-white font-medium'
-                : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
+                ? 'bg-indigo-600/20 text-white font-medium border border-indigo-500/30'
+                : 'text-[#94a3b8] hover:bg-white/[0.05] hover:text-white'
             }`}
           >
-            <Box size={14} className="text-[#858585]" />
+            <Box size={14} className="text-[#64748b]" />
             <span>Artifacts</span>
           </button>
 
@@ -194,53 +192,53 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Projects Tree Section (VS Code Explorer Aesthetic) */}
-        <div className="pt-2 border-t border-[#2d2d2d] flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between text-[11px] text-[#bbbbbb] font-bold tracking-wider px-2 py-1 shrink-0">
+        {/* Projects Tree Section */}
+        <div className="pt-2 border-t border-white/[0.08] flex-1 flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between text-[11px] text-[#94a3b8] font-bold tracking-wider px-2 py-1 shrink-0">
             <span className="truncate">EXPLORER: WORKSPACE</span>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={loadWorkspaceFiles}
                 title="Muat Ulang Berkas"
-                className="hover:text-white text-[#858585] p-0.5 rounded transition-colors"
+                className="hover:text-white text-[#64748b] p-1 rounded-lg hover:bg-white/[0.06] transition-colors"
               >
                 <RefreshCw size={11} className={isLoadingFiles ? 'animate-spin' : ''} />
               </button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-0.5 text-xs text-[#cccccc] mt-1 pr-1">
+          <div className="flex-1 overflow-y-auto space-y-0.5 text-xs text-[#cbd5e1] mt-1 pr-1">
             {workspaceFiles.length === 0 ? (
               <div className="py-8 px-3 text-center space-y-1.5">
-                <Folder size={22} className="mx-auto text-[#444444]" />
-                <div className="text-[11px] text-[#888888]">Belum ada berkas terbuka</div>
-                <div className="text-[10px] text-[#666666]">Gunakan File &gt; Open Folder untuk memulai proyek</div>
+                <Folder size={22} className="mx-auto text-[#475569]" />
+                <div className="text-[11px] text-[#94a3b8]">Belum ada berkas terbuka</div>
+                <div className="text-[10px] text-[#64748b]">Gunakan File &gt; Open Folder untuk memulai proyek</div>
               </div>
             ) : (
               <div>
                 <button
                   onClick={() => setProjectOpen(!projectOpen)}
-                  className="w-full flex items-center gap-1 px-1.5 py-1 hover:bg-[#2a2d2e] rounded cursor-pointer transition-colors"
+                  className="w-full flex items-center gap-1.5 px-2 py-1.5 hover:bg-white/[0.06] rounded-xl cursor-pointer transition-colors"
                 >
-                  {projectOpen ? <ChevronDown size={13} className="text-[#858585]" /> : <ChevronRight size={13} className="text-[#858585]" />}
-                  {projectOpen ? <FolderOpen size={14} className="text-[#dcb67a]" /> : <Folder size={14} className="text-[#dcb67a]" />}
-                  <span className="truncate font-normal">Workspace Project</span>
+                  {projectOpen ? <ChevronDown size={13} className="text-[#94a3b8]" /> : <ChevronRight size={13} className="text-[#94a3b8]" />}
+                  {projectOpen ? <FolderOpen size={14} className="text-amber-400" /> : <Folder size={14} className="text-amber-400" />}
+                  <span className="truncate font-medium text-white">Workspace Project</span>
                 </button>
 
                 {projectOpen && (
-                  <div className="ml-3 pl-1.5 border-l border-[#333333] space-y-0.5 mt-0.5">
+                  <div className="ml-3 pl-2 border-l border-white/10 space-y-0.5 mt-0.5">
                     {workspaceFiles.map((file: FileEntry) => (
                       <div
                         key={file.path}
                         onClick={() => handleFileClick(file)}
-                        className={`flex items-center gap-1.5 px-1.5 py-1 text-xs rounded cursor-pointer transition-colors ${
+                        className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-xl cursor-pointer transition-colors ${
                           selectedFile?.path === file.path && activeTab === 'file'
-                            ? 'bg-[#094771] text-white font-medium'
-                            : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
+                            ? 'bg-indigo-600/30 text-white font-medium border border-indigo-500/40'
+                            : 'text-[#cbd5e1] hover:bg-white/[0.06] hover:text-white'
                         }`}
                       >
                         {file.is_dir ? (
-                          <Folder size={13} className="text-[#dcb67a] shrink-0" />
+                          <Folder size={13} className="text-amber-400 shrink-0" />
                         ) : (
                           getFileIcon(file.name)
                         )}
@@ -255,17 +253,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Bottom Section - Settings (VS Code Status / Activity item) */}
-      <div className="p-2 border-t border-[#2d2d2d] shrink-0">
+      {/* Bottom Section - Settings */}
+      <div className="p-2 border-t border-white/[0.08] shrink-0">
         <button
           onClick={handleSettingsClick}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#cccccc] hover:text-white hover:bg-[#2a2d2e] rounded transition-colors group"
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#cbd5e1] hover:text-white hover:bg-white/[0.08] rounded-xl transition-colors group cursor-pointer"
         >
           <motion.div
             animate={{ rotate: isGearSpinning ? 360 : 0 }}
             transition={{ duration: 0.35, ease: 'easeInOut' }}
           >
-            <SettingsIcon size={15} className="text-[#858585] group-hover:text-white transition-colors" />
+            <SettingsIcon size={15} className="text-[#64748b] group-hover:text-white transition-colors" />
           </motion.div>
           <span>Settings</span>
         </button>
