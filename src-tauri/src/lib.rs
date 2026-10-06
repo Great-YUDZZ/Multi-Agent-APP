@@ -334,7 +334,8 @@ fn create_system_shortcuts(desktop: bool, start_menu: bool) -> Result<String, St
         if desktop {
             let desktop_dir = Path::new(&home).join("Desktop");
             if desktop_dir.exists() {
-                let shortcut_path = desktop_dir.join("multi-agent-desktop.desktop");
+                let _ = fs::remove_file(desktop_dir.join("multi-agent-desktop.desktop"));
+                let shortcut_path = desktop_dir.join("multi-agent-app.desktop");
                 fs::write(&shortcut_path, &desktop_entry).map_err(|e| e.to_string())?;
                 let _ = Command::new("chmod").args(["+x", &shortcut_path.to_string_lossy().to_string()]).output();
                 created.push("Desktop");
@@ -344,7 +345,9 @@ fn create_system_shortcuts(desktop: bool, start_menu: bool) -> Result<String, St
         if start_menu {
             let apps_dir = Path::new(&home).join(".local/share/applications");
             let _ = fs::create_dir_all(&apps_dir);
-            let shortcut_path = apps_dir.join("multi-agent-desktop.desktop");
+            let _ = fs::remove_file(apps_dir.join("multi-agent-desktop.desktop"));
+            let _ = fs::remove_file(apps_dir.join("app.desktop"));
+            let shortcut_path = apps_dir.join("multi-agent-app.desktop");
             fs::write(&shortcut_path, &desktop_entry).map_err(|e| e.to_string())?;
             let _ = Command::new("chmod").args(["+x", &shortcut_path.to_string_lossy().to_string()]).output();
             let _ = Command::new("update-desktop-database").arg(&apps_dir.to_string_lossy().to_string()).output();
