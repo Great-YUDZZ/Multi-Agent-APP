@@ -8,19 +8,28 @@ Designed natively for Linux (Debian / Ubuntu) and Windows (10 / 11).
 
 ## Downloads
 
-Official binary releases and installers are hosted on the GitHub Releases page:
+Direct one-click installer downloads from official GitHub Releases:
 
-- **Latest Release**: [Download Multi-Agent Desktop (Latest)](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases/latest)
-- **All Releases**: [Release Archive](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases)
+### Windows (10 / 11 64-bit)
+- [Download Windows Setup (.exe)](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases/download/v0.1.2/multi-agent-app_0.1.2_x64-setup.exe) - Recommended standalone installer with Start Menu and Desktop shortcuts.
+- [Download Windows Package (.msi)](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases/download/v0.1.2/multi-agent-app_0.1.2_x64_en-US.msi) - Windows Installer package.
 
-### Available Packages
+### Linux (Debian / Ubuntu / Universal)
+- [Download Debian / Ubuntu (.deb)](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases/download/v0.1.2/multi-agent-app_0.1.2_amd64.deb) - Native package with system launcher and dock integration.
+- [Download Portable AppImage (.AppImage)](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases/download/v0.1.2/multi-agent-app_0.1.2_amd64.AppImage) - Universal binary, runs directly without installation.
 
-| Platform | Format | Description | Target OS |
-| :--- | :--- | :--- | :--- |
-| **Windows** | `.exe` (NSIS) | Standalone setup wizard with start menu and desktop shortcuts | Windows 10, 11 (64-bit) |
-| **Windows** | `.msi` | Windows Installer package for standard and enterprise deployment | Windows 10, 11 (64-bit) |
-| **Linux** | `.deb` | Native Debian/Ubuntu package with desktop integration and icon registration | Ubuntu 20.04+, Debian 11+, Mint |
-| **Linux** | `.AppImage` | Portable universal executable (no installation required) | Any modern Linux x86_64 distribution |
+### Release Pages
+- [Latest Release Page](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases/tag/v0.1.2)
+- [All Releases Archive](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases)
+
+### Available Packages Overview
+
+| Platform | Format | Description | Target OS | Direct Download |
+| :--- | :--- | :--- | :--- | :--- |
+| Windows | `.exe` | Standalone setup wizard with shortcuts | Windows 10, 11 (64-bit) | [Download .exe](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases/download/v0.1.2/multi-agent-app_0.1.2_x64-setup.exe) |
+| Windows | `.msi` | Standard Windows Installer package | Windows 10, 11 (64-bit) | [Download .msi](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases/download/v0.1.2/multi-agent-app_0.1.2_x64_en-US.msi) |
+| Linux | `.deb` | Native Debian/Ubuntu package | Ubuntu 20.04+, Debian 11+ | [Download .deb](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases/download/v0.1.2/multi-agent-app_0.1.2_amd64.deb) |
+| Linux | `.AppImage` | Universal portable executable | Modern Linux x86_64 | [Download .AppImage](https://github.com/Great-YUDZZ/Multi-Agent-APP/releases/download/v0.1.2/multi-agent-app_0.1.2_amd64.AppImage) |
 
 ### Installation Instructions
 

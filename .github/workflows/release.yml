@@ -63,8 +63,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v__VERSION__ # Akan otomatis membaca versi dari tauri.conf.json jika ada tag baru
-          releaseName: "Multi-Agent Desktop v__VERSION__"
+          tagName: ${{ github.ref_name }}
+          releaseName: "Multi-Agent Desktop ${{ github.ref_name }}"
           releaseBody: "Automated Multi-Agent Desktop App Release for Linux (Debian/Ubuntu) and Windows."
           releaseDraft: false
           prerelease: false
