@@ -211,10 +211,10 @@ fn create_system_shortcuts(desktop: bool, start_menu: bool) -> Result<String, St
                     .unwrap_or_else(|_| "multi-agent-desktop".to_string())
             });
 
-        let home = std::env::var("HOME").map_err(|e| format!("HOME environment variable not found: {}", e))?;
+        let icon_path = format!("{}/.local/share/icons/multi-agent-app.png", home);
         let desktop_entry = format!(
-            "[Desktop Entry]\nType=Application\nName=Multi-Agent Desktop\nGenericName=AI Agent Workspace\nComment=Modern AI Multi-Agent Workspace\nExec=\"{}\" %U\nIcon=utilities-terminal\nTerminal=false\nCategories=Development;IDE;\nStartupWMClass=multi-agent-app\n",
-            exec_path
+            "[Desktop Entry]\nType=Application\nName=Multi-Agent Desktop\nGenericName=AI Agent Workspace\nComment=Modern AI Multi-Agent Workspace\nExec=\"{}\" %U\nIcon={}\nTerminal=false\nCategories=Development;IDE;Utility;\nStartupWMClass=app\n",
+            exec_path, icon_path
         );
 
         let mut created = Vec::new();
