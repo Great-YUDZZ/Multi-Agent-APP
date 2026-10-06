@@ -444,7 +444,7 @@ export function App() {
 
   return (
     <div
-      className="flex flex-col w-screen h-screen bg-[#0c0d14] text-[#e2e8f0] overflow-hidden select-none font-sans"
+      className="flex flex-col w-screen h-screen bg-[#1e1e1e] text-[#cccccc] overflow-hidden select-none font-sans"
       style={{ zoom: `${zoomLevel}%` }}
     >
       {/* Top Menu Bar */}
@@ -526,25 +526,25 @@ export function App() {
                   </span>
                 </div>
 
-                {/* 1. Walkthrough Report Artifact */}
+                {/* 1. Walkthrough Report Artifact (Blueprint 15.2) */}
                 {currentSession.walkthrough && (
-                  <div className="bg-[#141724]/90 border border-white/[0.08] rounded-2xl p-5 space-y-3.5 shadow-lg">
+                  <div className="bg-[#252526] border border-[#333333] rounded p-5 space-y-3 shadow-lg">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 size={16} className="text-emerald-400" />
-                        <span className="text-xs font-semibold text-white">
+                        <CheckCircle2 size={16} className="text-[#4ec9b0]" />
+                        <span className="text-xs font-semibold text-[#ffffff]">
                           walkthrough.md (Build Mode Execution Summary)
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleCopyText('walkthrough', currentSession.walkthrough!)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.06] hover:bg-white/10 text-[#cbd5e1] hover:text-white rounded-xl text-xs transition-colors cursor-pointer border border-white/10"
+                          className="flex items-center gap-1 px-2.5 py-1 bg-[#2d2d2d] hover:bg-[#383838] text-[#cccccc] hover:text-white rounded text-xs transition-colors cursor-pointer border border-[#3c3c3c]"
                         >
                           {copiedArtifactId === 'walkthrough' ? (
                             <>
-                              <Check size={12} className="text-emerald-400" />
-                              <span className="text-emerald-400">Copied!</span>
+                              <Check size={12} className="text-[#4ec9b0]" />
+                              <span className="text-[#4ec9b0]">Copied!</span>
                             </>
                           ) : (
                             <>
@@ -555,7 +555,7 @@ export function App() {
                         </button>
                         <button
                           onClick={() => handleDownloadMarkdown(`walkthrough-${currentSession.id}.md`, currentSession.walkthrough!)}
-                          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-xl text-xs font-medium transition-all shadow-md shadow-cyan-500/20 cursor-pointer"
+                          className="flex items-center gap-1 px-2.5 py-1 bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#094771] text-white rounded text-xs transition-colors cursor-pointer"
                         >
                           <Download size={12} />
                           <span>Download</span>
@@ -563,7 +563,7 @@ export function App() {
                       </div>
                     </div>
 
-                    <div className="bg-[#0c0d14] border border-white/10 rounded-xl p-4 text-xs font-mono text-[#cbd5e1] whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">
+                    <div className="bg-[#1e1e1e] border border-[#333333] rounded p-3 text-xs font-mono text-[#cccccc] whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">
                       {currentSession.walkthrough}
                     </div>
                   </div>
@@ -571,21 +571,21 @@ export function App() {
 
                 {/* 2. PlanDocument Artifact */}
                 {currentSession.planDocument && (
-                  <div className="bg-[#141724]/90 border border-white/[0.08] rounded-2xl p-5 space-y-3.5 shadow-lg">
+                  <div className="bg-[#252526] border border-[#333333] rounded p-5 space-y-3 shadow-lg">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <FileText size={16} className="text-cyan-400" />
+                      <div className="flex items-center gap-2">
+                        <FileText size={16} className="text-[#9cdcfe]" />
                         <div>
-                          <div className="text-xs font-semibold text-white">
+                          <div className="text-xs font-semibold text-[#ffffff]">
                             {currentSession.planDocument.goal}
                           </div>
-                          <div className="text-[10px] text-[#94a3b8]">
+                          <div className="text-[10px] text-[#858585]">
                             {currentSession.planDocument.tasks.length} Planned Tasks · Created at {new Date(currentSession.planDocument.createdAt).toLocaleTimeString()}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono px-2.5 py-0.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 rounded-full font-medium">
+                        <span className="text-[10px] font-mono px-2 py-0.5 bg-[#1e3a2f] text-[#4ec9b0] rounded">
                           PlanDocument
                         </span>
                         <button
@@ -594,12 +594,12 @@ export function App() {
                               currentSession.planDocument?.tasks.map((t, i) => `### Task ${i+1}: ${t.description}\n- **Assigned:** ${t.assignedAgentId}\n- **Criteria:** ${t.successCriteria}\n`).join('\n');
                             handleCopyText('plan', markdown);
                           }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.06] hover:bg-white/10 text-[#cbd5e1] hover:text-white rounded-xl text-xs transition-colors cursor-pointer border border-white/10"
+                          className="flex items-center gap-1 px-2.5 py-1 bg-[#2d2d2d] hover:bg-[#383838] text-[#cccccc] hover:text-white rounded text-xs transition-colors cursor-pointer border border-[#3c3c3c]"
                         >
                           {copiedArtifactId === 'plan' ? (
                             <>
-                              <Check size={12} className="text-emerald-400" />
-                              <span className="text-emerald-400">Copied!</span>
+                              <Check size={12} className="text-[#4ec9b0]" />
+                              <span className="text-[#4ec9b0]">Copied!</span>
                             </>
                           ) : (
                             <>
@@ -611,16 +611,16 @@ export function App() {
                       </div>
                     </div>
 
-                    <div className="space-y-2 text-xs text-[#94a3b8] pt-1 border-t border-white/[0.06]">
+                    <div className="space-y-2 text-xs text-[#858585] pt-1 border-t border-[#333333]">
                       {currentSession.planDocument.tasks.map((t, idx) => (
-                        <div key={t.id} className="flex items-start gap-2.5 bg-[#0c0d14]/80 p-3 rounded-xl border border-white/10">
-                          <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                        <div key={t.id} className="flex items-start gap-2 bg-[#1e1e1e] p-2.5 rounded border border-[#2d2d2d]">
+                          <CheckCircle2 size={14} className="text-[#4ec9b0] shrink-0 mt-0.5" />
                           <div className="space-y-0.5 flex-1 min-w-0">
-                            <div className="text-white font-medium">
+                            <div className="text-[#cccccc] font-medium">
                               #{idx + 1}: {t.description}
                             </div>
-                            <div className="text-[10px] text-[#94a3b8] font-mono flex items-center gap-3">
-                              <span>Agent: <strong className="text-cyan-300">{t.assignedAgentId}</strong></span>
+                            <div className="text-[10px] text-[#777777] font-mono flex items-center gap-3">
+                              <span>Agent: <strong className="text-[#9cdcfe]">{t.assignedAgentId}</strong></span>
                               <span>Criteria: {t.successCriteria}</span>
                             </div>
                           </div>
@@ -632,34 +632,34 @@ export function App() {
 
                 {/* 3. Session Attached Files & Media */}
                 {currentSession.attachedFiles && currentSession.attachedFiles.length > 0 && (
-                  <div className="bg-[#141724]/90 border border-white/[0.08] rounded-2xl p-5 space-y-3.5 shadow-lg">
+                  <div className="bg-[#252526] border border-[#333333] rounded p-5 space-y-3 shadow-lg">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Paperclip size={16} className="text-amber-400" />
-                        <span className="text-xs font-semibold text-white">
+                        <Paperclip size={16} className="text-[#dcdcaa]" />
+                        <span className="text-xs font-semibold text-[#ffffff]">
                           Attached Files & Assets ({currentSession.attachedFiles.length})
                         </span>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 pt-1 border-t border-white/[0.06]">
+                    <div className="grid grid-cols-2 gap-2.5 pt-1 border-t border-[#333333]">
                       {currentSession.attachedFiles.map((file) => (
                         <div
                           key={file.id}
-                          className="flex items-center gap-2.5 p-2.5 bg-[#0c0d14]/80 border border-white/10 rounded-xl"
+                          className="flex items-center gap-2.5 p-2 bg-[#1e1e1e] border border-[#2d2d2d] rounded"
                         >
                           {file.content.type === 'image' ? (
                             <img
                               src={file.content.base64}
                               alt={file.fileName}
-                              className="w-10 h-10 object-cover rounded-lg border border-white/10 shrink-0"
+                              className="w-10 h-10 object-cover rounded border border-[#333333] shrink-0"
                             />
                           ) : (
-                            <FileText size={20} className="text-cyan-400 shrink-0 ml-1" />
+                            <FileText size={20} className="text-[#4ec9b0] shrink-0 ml-1" />
                           )}
                           <div className="min-w-0 flex-1">
-                            <div className="text-xs font-mono text-white truncate">{file.fileName}</div>
-                            <div className="text-[10px] text-[#94a3b8]">
+                            <div className="text-xs font-mono text-[#cccccc] truncate">{file.fileName}</div>
+                            <div className="text-[10px] text-[#777777]">
                               {Math.round(file.sizeBytes / 1024) || 1} KB · {file.mimeType}
                             </div>
                           </div>
@@ -671,10 +671,10 @@ export function App() {
 
                 {/* Empty State */}
                 {!currentSession.walkthrough && !currentSession.planDocument && (!currentSession.attachedFiles || currentSession.attachedFiles.length === 0) && (
-                  <div className="text-center py-16 text-xs text-[#94a3b8] bg-[#141724]/60 border border-white/[0.08] rounded-2xl space-y-2">
-                    <FileText size={36} className="mx-auto mb-2 text-[#64748b]" />
-                    <div className="font-semibold text-white">Belum Ada Artifacts</div>
-                    <p className="max-w-xs mx-auto text-[11px] text-[#94a3b8]">
+                  <div className="text-center py-16 text-xs text-[#858585] bg-[#252526] border border-[#333333] rounded">
+                    <FileText size={36} className="mx-auto mb-3 text-[#3c3c3c]" />
+                    <div className="font-semibold text-[#cccccc] mb-1">Belum Ada Artifacts</div>
+                    <p className="max-w-xs mx-auto text-[11px] text-[#777777]">
                       Diskusikan proyek di Plan Mode atau jalankan Build Mode untuk menghasilkan PlanDocument, deliverables, dan walkthrough otomatis.
                     </p>
                   </div>
@@ -722,31 +722,31 @@ export function App() {
       </div>
 
       {/* Sleek Harmonious Bottom Status Bar */}
-      <footer className="h-6 bg-[#090b10] border-t border-white/[0.08] text-[#64748b] flex items-center justify-between px-3 text-[11px] select-none font-sans shrink-0 z-20">
+      <footer className="h-6 bg-[#181818] border-t border-[#2d2d2d] text-[#858585] flex items-center justify-between px-2 text-[11px] select-none font-sans shrink-0 z-20">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsTerminalOpen((prev) => !prev)}
-            className="flex items-center gap-1.5 hover:text-white hover:bg-white/[0.06] px-2 py-0.5 rounded-md cursor-pointer transition-colors"
+            className="flex items-center gap-1.5 hover:text-white hover:bg-[#2a2d2e] px-1.5 py-0.5 rounded cursor-pointer transition-colors"
           >
-            <TerminalIcon size={12} className="text-emerald-400" />
-            <span className="font-mono text-[#cbd5e1]">Terminal</span>
+            <TerminalIcon size={12} className="text-[#22c55e]" />
+            <span className="font-mono text-[#cccccc]">Terminal</span>
           </button>
           <span className="flex items-center gap-1 hover:text-white cursor-pointer transition-colors">
             <span>git:(main)</span>
           </span>
           <span className="flex items-center gap-1 hover:text-white cursor-pointer transition-colors">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4ec9b0]" />
             <span>0 errors</span>
           </span>
         </div>
 
         <div className="flex items-center gap-3 text-[10px]">
-          <span className="text-[#94a3b8]">{activeAgents.length} Agents Active</span>
-          <span className="px-2 py-0.5 bg-white/[0.04] text-cyan-300 border border-white/10 rounded-full font-mono capitalize">
+          <span className="text-[#cccccc]">{activeAgents.length} Agents Active</span>
+          <span className="px-1.5 py-0.5 bg-[#252526] text-[#4ec9b0] border border-[#333333] rounded font-mono capitalize">
             Mode: {discussionStrategy}
           </span>
           <span>UTF-8</span>
-          <span className="text-[#475569]">Tauri v2 + React 19</span>
+          <span className="text-[#666666]">Tauri v2 + React 19</span>
         </div>
       </footer>
 

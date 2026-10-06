@@ -26,7 +26,6 @@ import {
   Maximize2,
   ChevronRight,
 } from 'lucide-react';
-import { CubesLogo } from './CubesLogo';
 
 interface TopMenuBarProps {
   onToggleTerminal?: () => void;
@@ -96,57 +95,57 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
   return (
     <div
       ref={menuBarRef}
-      className="h-9 w-full bg-[#0c0e15] border-b border-white/[0.08] flex items-center px-3 text-xs text-[#94a3b8] select-none z-40 font-sans relative"
+      className="h-8 w-full bg-[#1f1f1f] border-b border-[#2d2d2d] flex items-center px-3 text-xs text-[#969696] select-none z-40 font-sans relative"
     >
       {/* Brand Logo & Name */}
-      <div
-        onClick={() => onOpenAbout?.()}
-        className="flex items-center gap-2 mr-3 px-1.5 py-1 rounded-lg hover:bg-white/[0.05] cursor-pointer transition-colors"
-      >
-        <CubesLogo size={20} withGlow={true} />
-        <span className="font-semibold text-white tracking-wide text-xs">
+      <div className="flex items-center gap-2 mr-3">
+        <img src="/logo.png" alt="Multi-Agent Logo" className="w-4 h-4 rounded-sm object-cover shadow-sm" />
+        <span
+          onClick={() => onOpenAbout?.()}
+          className="font-semibold text-[#cccccc] hover:text-white cursor-pointer transition-colors"
+        >
           Multi-Agent Desktop
         </span>
       </div>
 
       {/* Menus */}
-      <div className="flex items-center space-x-0.5">
+      <div className="flex items-center space-x-1">
         {/* FILE MENU */}
         <div className="relative">
           <button
             type="button"
             onClick={() => handleMenuClick('file')}
             onMouseEnter={() => handleMenuHover('file')}
-            className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors text-xs font-medium ${
+            className={`px-2 py-0.5 rounded cursor-pointer transition-colors text-xs ${
               activeMenu === 'file'
-                ? 'bg-indigo-600/30 text-white border border-indigo-500/30'
-                : 'hover:text-white hover:bg-white/[0.06] text-[#cbd5e1]'
+                ? 'bg-[#094771] text-white'
+                : 'hover:text-white hover:bg-[#2a2d2e] text-[#cccccc]'
             }`}
           >
             File
           </button>
 
           {activeMenu === 'file' && (
-            <div className="absolute left-0 top-full mt-1.5 w-64 bg-[#141724]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-1.5 text-xs text-[#cbd5e1] z-50">
+            <div className="absolute left-0 top-full mt-1 w-64 bg-[#252526] border border-[#454545] rounded shadow-2xl py-1 text-xs text-[#cccccc] z-50">
               <button
                 type="button"
                 onClick={() => executeAction(() => onFileAction?.('new-file'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <FileText size={14} className="text-[#818cf8]" />
+                  <FileText size={14} className="text-[#858585]" />
                   <span>New File</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+N</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+N</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onFileAction?.('new-text-file'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <FileText size={14} className="text-[#818cf8]" />
+                  <FileText size={14} className="text-[#858585]" />
                   <span>New Text File</span>
                 </span>
               </button>
@@ -154,48 +153,48 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
               <button
                 type="button"
                 onClick={() => executeAction(() => onFileAction?.('new-window'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Maximize2 size={14} className="text-[#818cf8]" />
+                  <Maximize2 size={14} className="text-[#858585]" />
                   <span>New Window</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+Shift+N</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+Shift+N</span>
               </button>
 
-              <div className="h-[1px] bg-white/[0.08] my-1 mx-2" />
+              <div className="h-[1px] bg-[#3c3c3c] my-1" />
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onFileAction?.('open-file'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <FileText size={14} className="text-[#38bdf8]" />
+                  <FileText size={14} className="text-[#858585]" />
                   <span>Open File...</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+O</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+O</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onFileAction?.('open-folder'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <FolderOpen size={14} className="text-[#38bdf8]" />
+                  <FolderOpen size={14} className="text-[#858585]" />
                   <span>Open Folder...</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+K Ctrl+O</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+K Ctrl+O</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onFileAction?.('open-workspace'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <FolderOpen size={14} className="text-[#38bdf8]" />
+                  <FolderOpen size={14} className="text-[#858585]" />
                   <span>Open Workspace from File</span>
                 </span>
               </button>
@@ -203,39 +202,39 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
               <button
                 type="button"
                 onClick={() => executeAction(() => onFileAction?.('open-recent'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <FolderOpen size={14} className="text-[#38bdf8]" />
+                  <FolderOpen size={14} className="text-[#858585]" />
                   <span>Open Recent</span>
                 </span>
-                <ChevronRight size={13} className="text-[#64748b]" />
+                <ChevronRight size={13} className="text-[#666666]" />
               </button>
 
-              <div className="h-[1px] bg-white/[0.08] my-1 mx-2" />
+              <div className="h-[1px] bg-[#3c3c3c] my-1" />
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onFileAction?.('save'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Save size={14} className="text-[#34d399]" />
+                  <Save size={14} className="text-[#858585]" />
                   <span>Save</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+S</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+S</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onFileAction?.('save-as'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Save size={14} className="text-[#34d399]" />
+                  <Save size={14} className="text-[#858585]" />
                   <span>Save As...</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+Shift+S</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+Shift+S</span>
               </button>
             </div>
           )}
@@ -247,103 +246,103 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
             type="button"
             onClick={() => handleMenuClick('edit')}
             onMouseEnter={() => handleMenuHover('edit')}
-            className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors text-xs font-medium ${
+            className={`px-2 py-0.5 rounded cursor-pointer transition-colors text-xs ${
               activeMenu === 'edit'
-                ? 'bg-indigo-600/30 text-white border border-indigo-500/30'
-                : 'hover:text-white hover:bg-white/[0.06] text-[#cbd5e1]'
+                ? 'bg-[#094771] text-white'
+                : 'hover:text-white hover:bg-[#2a2d2e] text-[#cccccc]'
             }`}
           >
             Edit
           </button>
 
           {activeMenu === 'edit' && (
-            <div className="absolute left-0 top-full mt-1.5 w-56 bg-[#141724]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-1.5 text-xs text-[#cbd5e1] z-50">
+            <div className="absolute left-0 top-full mt-1 w-56 bg-[#252526] border border-[#454545] rounded shadow-2xl py-1 text-xs text-[#cccccc] z-50">
               <button
                 type="button"
                 onClick={() => executeAction(() => onEditAction?.('undo'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Undo2 size={14} className="text-[#94a3b8]" />
+                  <Undo2 size={14} className="text-[#858585]" />
                   <span>Undo</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+Z</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+Z</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onEditAction?.('redo'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Redo2 size={14} className="text-[#94a3b8]" />
+                  <Redo2 size={14} className="text-[#858585]" />
                   <span>Redo</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+Y</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+Y</span>
               </button>
 
-              <div className="h-[1px] bg-white/[0.08] my-1 mx-2" />
+              <div className="h-[1px] bg-[#3c3c3c] my-1" />
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onEditAction?.('cut'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Scissors size={14} className="text-[#94a3b8]" />
+                  <Scissors size={14} className="text-[#858585]" />
                   <span>Cut</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+X</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+X</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onEditAction?.('copy'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Copy size={14} className="text-[#94a3b8]" />
+                  <Copy size={14} className="text-[#858585]" />
                   <span>Copy</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+C</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+C</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onEditAction?.('paste'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Clipboard size={14} className="text-[#94a3b8]" />
+                  <Clipboard size={14} className="text-[#858585]" />
                   <span>Paste</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+V</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+V</span>
               </button>
 
-              <div className="h-[1px] bg-white/[0.08] my-1 mx-2" />
+              <div className="h-[1px] bg-[#3c3c3c] my-1" />
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onEditAction?.('find'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Search size={14} className="text-[#94a3b8]" />
+                  <Search size={14} className="text-[#858585]" />
                   <span>Find</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+F</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+F</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onEditAction?.('replace'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Replace size={14} className="text-[#94a3b8]" />
+                  <Replace size={14} className="text-[#858585]" />
                   <span>Replace</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl+H</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl+H</span>
               </button>
             </div>
           )}
@@ -355,65 +354,65 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
             type="button"
             onClick={() => handleMenuClick('view')}
             onMouseEnter={() => handleMenuHover('view')}
-            className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors text-xs font-medium ${
+            className={`px-2 py-0.5 rounded cursor-pointer transition-colors text-xs ${
               activeMenu === 'view'
-                ? 'bg-indigo-600/30 text-white border border-indigo-500/30'
-                : 'hover:text-white hover:bg-white/[0.06] text-[#cbd5e1]'
+                ? 'bg-[#094771] text-white'
+                : 'hover:text-white hover:bg-[#2a2d2e] text-[#cccccc]'
             }`}
           >
             View
           </button>
 
           {activeMenu === 'view' && (
-            <div className="absolute left-0 top-full mt-1.5 w-60 bg-[#141724]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-1.5 text-xs text-[#cbd5e1] z-50">
+            <div className="absolute left-0 top-full mt-1 w-60 bg-[#252526] border border-[#454545] rounded shadow-2xl py-1 text-xs text-[#cccccc] z-50">
               <button
                 type="button"
                 onClick={() => executeAction(() => onZoomChange?.('in'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <ZoomIn size={14} className="text-[#38bdf8]" />
+                  <ZoomIn size={14} className="text-[#858585]" />
                   <span>Zoom In</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl +</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl +</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onZoomChange?.('out'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <ZoomOut size={14} className="text-[#38bdf8]" />
+                  <ZoomOut size={14} className="text-[#858585]" />
                   <span>Zoom Out</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl -</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl -</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onZoomChange?.('reset'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <RotateCcw size={14} className="text-[#38bdf8]" />
+                  <RotateCcw size={14} className="text-[#858585]" />
                   <span>Reset Zoom ({zoomPercent}%)</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl 0</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl 0</span>
               </button>
 
-              <div className="h-[1px] bg-white/[0.08] my-1 mx-2" />
+              <div className="h-[1px] bg-[#3c3c3c] my-1" />
 
               <button
                 type="button"
                 onClick={() => executeAction(onToggleTerminal)}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Terminal size={14} className="text-[#34d399]" />
+                  <Terminal size={14} className="text-[#858585]" />
                   <span>Toggle Terminal</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">Ctrl + `</span>
+                <span className="text-[11px] text-[#777777] font-mono">Ctrl + `</span>
               </button>
             </div>
           )}
@@ -423,10 +422,10 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
         <button
           type="button"
           onClick={onToggleTerminal}
-          className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors text-xs font-medium ${
+          className={`px-2 py-0.5 rounded cursor-pointer transition-colors text-xs ${
             isTerminalOpen
-              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-              : 'hover:text-white hover:bg-white/[0.06] text-[#cbd5e1]'
+              ? 'bg-[#37373d] text-white font-medium'
+              : 'hover:text-white hover:bg-[#2a2d2e] text-[#cccccc]'
           }`}
         >
           Terminal
@@ -438,95 +437,95 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
             type="button"
             onClick={() => handleMenuClick('help')}
             onMouseEnter={() => handleMenuHover('help')}
-            className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors text-xs font-medium ${
+            className={`px-2 py-0.5 rounded cursor-pointer transition-colors text-xs ${
               activeMenu === 'help'
-                ? 'bg-indigo-600/30 text-white border border-indigo-500/30'
-                : 'hover:text-white hover:bg-white/[0.06] text-[#cbd5e1]'
+                ? 'bg-[#094771] text-white'
+                : 'hover:text-white hover:bg-[#2a2d2e] text-[#cccccc]'
             }`}
           >
             Help
           </button>
 
           {activeMenu === 'help' && (
-            <div className="absolute left-0 top-full mt-1.5 w-72 bg-[#141724]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-1.5 text-xs text-[#cbd5e1] z-50">
+            <div className="absolute left-0 top-full mt-1 w-72 bg-[#252526] border border-[#454545] rounded shadow-2xl py-1 text-xs text-[#cccccc] z-50">
               <button
                 type="button"
                 onClick={() => executeAction(() => onOpenHelp?.('overview'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <HelpCircle size={14} className="text-[#38bdf8]" />
+                  <HelpCircle size={14} className="text-[#3794ff]" />
                   <span>Pusat Bantuan & Dokumentasi</span>
                 </span>
-                <span className="text-[11px] text-[#64748b] font-mono">F1</span>
+                <span className="text-[11px] text-[#777777] font-mono">F1</span>
               </button>
 
-              <div className="h-[1px] bg-white/[0.08] my-1 mx-2" />
+              <div className="h-[1px] bg-[#3c3c3c] my-1" />
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onOpenHelp?.('create-agent'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center gap-2 px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
-                <Bot size={14} className="text-[#34d399]" />
+                <Bot size={14} className="text-[#4ec9b0]" />
                 <span>Panduan: Cara Membuat Agent</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onOpenHelp?.('plan-mode'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center gap-2 px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
-                <Layers size={14} className="text-[#fb923c]" />
+                <Layers size={14} className="text-[#ce9178]" />
                 <span>Panduan: Plan Mode</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onOpenHelp?.('build-mode'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center gap-2 px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
-                <CheckCircle2 size={14} className="text-[#38bdf8]" />
+                <CheckCircle2 size={14} className="text-[#22c55e]" />
                 <span>Panduan: Build Mode & Task Graph</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onOpenHelp?.('terminal'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center gap-2 px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
-                <ShieldCheck size={14} className="text-[#facc15]" />
+                <ShieldCheck size={14} className="text-[#eab308]" />
                 <span>Panduan: Terminal & Izin Eksekusi</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(() => onOpenHelp?.('shortcuts'))}
-                className="w-[calc(100%-8px)] mx-1 flex items-center justify-between px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Keyboard size={14} className="text-[#a78bfa]" />
+                  <Keyboard size={14} className="text-[#9cdcfe]" />
                   <span>Daftar Shortcut Keyboard</span>
                 </span>
               </button>
 
-              <div className="h-[1px] bg-white/[0.08] my-1 mx-2" />
+              <div className="h-[1px] bg-[#3c3c3c] my-1" />
 
               <button
                 type="button"
                 onClick={() => executeAction(onOpenShortcutSetup)}
-                className="w-[calc(100%-8px)] mx-1 flex items-center gap-2 px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
-                <Rocket size={14} className="text-[#38bdf8]" />
+                <Rocket size={14} className="text-[#3794ff]" />
                 <span>Pengaturan Shortcut Desktop & Start Menu...</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => executeAction(onOpenAbout)}
-                className="w-[calc(100%-8px)] mx-1 flex items-center gap-2 px-2.5 py-1.5 hover:bg-indigo-600/25 hover:text-white rounded-lg transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[#094771] hover:text-white transition-colors"
               >
-                <Info size={14} className="text-[#94a3b8]" />
+                <Info size={14} className="text-[#858585]" />
                 <span>Tentang Multi-Agent Desktop</span>
               </button>
             </div>
@@ -538,10 +537,10 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
       <div className="flex-1 flex justify-center">
         <div
           onClick={() => onOpenHelp?.('overview')}
-          className="bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 px-5 py-1 rounded-full text-[11px] text-[#94a3b8] hover:text-white cursor-pointer flex items-center gap-1.5 transition-all shadow-sm"
+          className="bg-[#2d2d2d] hover:bg-[#383838] px-12 py-0.5 rounded text-[11px] text-[#cccccc] border border-[#3c3c3c] cursor-pointer flex items-center gap-1.5 transition-colors"
           title="Klik untuk membuka dokumentasi dan bantuan"
         >
-          <svg className="w-3.5 h-3.5 text-[#64748b]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-3 h-3 text-[#858585]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <span>Multi-Agent Workspace — Tekan F1 untuk Panduan</span>

@@ -1,39 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: dark;
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-  
-  --app-bg: #0c0d14;
-  --panel-bg: #121520;
-  --panel-border: rgba(255, 255, 255, 0.07);
-  --card-bg: #171b26;
-  --card-border: rgba(255, 255, 255, 0.08);
-  
-  --accent-cyan: #06b6d4;
-  --accent-indigo: #6366f1;
-  --accent-violet: #8b5cf6;
-  --accent-coral: #f43f5e;
+  --vscode-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --vscode-font-mono: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', Consolas, 'Courier New', monospace;
+  --vscode-editor-bg: #1e1e1e;
+  --vscode-sidebar-bg: #252526;
+  --vscode-titlebar-bg: #1f1f1f;
+  --vscode-input-bg: #3c3c3c;
+  --vscode-border: #2d2d2d;
+  --vscode-hover: #2a2d2e;
+  --vscode-selected: #37373d;
+  --vscode-blue: #007acc;
+  --vscode-blue-hover: #1177bb;
+  --vscode-fg: #cccccc;
+  --vscode-fg-muted: #858585;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--app-bg);
-  color: #e2e8f0;
-  font-family: var(--font-sans);
+  background-color: var(--vscode-editor-bg);
+  color: var(--vscode-fg);
+  font-family: var(--vscode-font-sans);
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.4;
   overflow: hidden;
   user-select: none;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
 }
 
 #root {
@@ -41,13 +37,12 @@ body {
   height: 100vh;
   overflow: hidden;
   display: flex;
-  font-family: var(--font-sans);
 }
 
-/* Elegant Smooth Scrollbar */
+/* VS Code Style Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -55,13 +50,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
-  border-radius: 9999px;
-  transition: background 0.2s ease;
+  background: rgba(121, 121, 121, 0.4);
+  border-radius: 0px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(100, 100, 100, 0.7);
 }
 
 ::-webkit-scrollbar-corner {
@@ -69,5 +63,5 @@ body {
 }
 
 code, kbd, samp, pre {
-  font-family: var(--font-mono);
+  font-family: var(--vscode-font-mono);
 }
