@@ -5,7 +5,6 @@ import {
   Maximize2,
   Minimize2,
   X,
-  Square,
 } from 'lucide-react';
 import { listen } from '@tauri-apps/api/event';
 import {
@@ -139,7 +138,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
     });
   };
 
-  // Global Ctrl+C handler when terminal is open
+  // Keyboard shortcut Ctrl+C to cancel running process without any helper text
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
@@ -200,7 +199,6 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
                 isLoading: false,
                 result: {
                   ...res,
-                  // Keep whatever stream output was accumulated if final is empty
                   stdout: res.stdout || item.result?.stdout || '',
                   stderr: res.stderr || item.result?.stderr || '',
                 },
@@ -303,40 +301,29 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
           </button>
         </div>
 
-        {/* Actions */}
+        {/* Action Controls */}
         <div className="flex items-center gap-1.5 text-[#858585]">
-          {isAnyLoading && (
-            <button
-              onClick={handleCancelCommand}
-              title="Hentikan perintah yang berjalan (Ctrl+C)"
-              className="flex items-center gap-1 px-2 py-0.5 bg-[#e06c75]/20 hover:bg-[#e06c75]/35 text-[#e06c75] border border-[#e06c75]/40 rounded text-[10px] font-medium transition-colors cursor-pointer mr-1 animate-pulse"
-            >
-              <Square size={8} className="fill-[#e06c75]" />
-              <span>Stop (Ctrl+C)</span>
-            </button>
-          )}
-
           <button
             onClick={() => setEntries([])}
-            title="Bersihkan Terminal (clear)"
+            title="Clear Terminal (clear)"
             className="p-1 hover:text-white hover:bg-[#262626] rounded transition-colors cursor-pointer"
           >
-            <Trash2 size={13} />
+            <Trash2 size={12} />
           </button>
 
           {onToggleMaximize && (
             <button
               onClick={onToggleMaximize}
-              title={isMaximized ? 'Perkecil Terminal' : 'Perbesar Terminal'}
+              title={isMaximized ? 'Restore Panel' : 'Maximize Panel'}
               className="p-1 hover:text-white hover:bg-[#262626] rounded transition-colors cursor-pointer"
             >
-              {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+              {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
             </button>
           )}
 
           <button
             onClick={onClose}
-            title="Tutup Terminal (Ctrl+`)"
+            title="Close Terminal"
             className="p-1 hover:text-white hover:bg-[#262626] rounded transition-colors cursor-pointer"
           >
             <X size={13} />
@@ -353,8 +340,6 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
           {/* Minimal Terminal Host Banner */}
           <div className="text-[#737373] text-[11px] pb-1 select-none">
             Multi-Agent App Terminal [host: {isNative ? 'native-shell' : 'pty-bridge'}]
-            <br />
-            Ketik perintah shell lalu tekan Enter. Tekan Ctrl+C untuk membatalkan proses.
           </div>
 
           {/* Command History Entries */}
@@ -369,7 +354,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
                 <span className="text-[#f5f5f5] font-normal">{entry.command}</span>
               </div>
 
-              {/* Real-time Streaming Output (renders live while running and retains after done) */}
+              {/* Live Streaming Output */}
               {entry.result && (
                 <div className="pl-1">
                   {entry.result.stdout && (
@@ -383,19 +368,6 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
                       {entry.result.stderr}
                     </pre>
                   )}
-                </div>
-              )}
-
-              {/* Loading Indicator with In-line Cancel Button */}
-              {entry.isLoading && (
-                <div className="flex items-center gap-2 text-[#737373] text-[11px] pl-1 py-0.5">
-                  <span className="animate-pulse">[running...]</span>
-                  <button
-                    onClick={handleCancelCommand}
-                    className="px-1.5 py-0.5 bg-[#e06c75]/20 hover:bg-[#e06c75]/35 text-[#e06c75] border border-[#e06c75]/40 rounded text-[10px] font-sans transition-colors cursor-pointer"
-                  >
-                    Hentikan (Ctrl+C)
-                  </button>
                 </div>
               )}
             </div>
@@ -426,9 +398,9 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
         <div className="flex-1 p-3 overflow-y-auto text-[#a3a3a3] text-xs font-mono space-y-1 bg-[#0c0c0c]">
           <div className="text-white font-medium mb-1">[Multi-Agent Workspace Output Log]</div>
           <div>[INFO] Tauri native host shell initialized.</div>
-          <div>[INFO] Non-blocking process execution engine active.</div>
-          <div>[INFO] Real-time stdout/stderr stream listener registered.</div>
-          <div>[INFO] Process cancellation &amp; Ctrl+C signal handler ready.</div>
+          <div>[INFO] Active Providers loaded from ProviderStore.</div>
+          <div>[INFO] Agent Registry ready with active skills.</div>
+          <div>[INFO] Session watcher active.</div>
         </div>
       )}
     </div>
