@@ -71,6 +71,13 @@ export function App() {
     }
   };
 
+  const handleCloseFolder = () => {
+    setWorkspacePath('');
+    localStorage.removeItem('multi_agent_workspace_dir');
+    setSelectedFile(null);
+    addToast('info', 'Folder workspace ditutup');
+  };
+
   // Terminal state
   const [isTerminalOpen, setIsTerminalOpen] = useState(initialTerminal);
   const [isTerminalMaximized, setIsTerminalMaximized] = useState(false);
@@ -497,6 +504,7 @@ export function App() {
           isTerminalOpen={isTerminalOpen}
           workspacePath={workspacePath}
           onOpenFolder={handleOpenFolder}
+          onCloseFolder={handleCloseFolder}
         />
 
         {/* Center Main Stage + Terminal Dock */}

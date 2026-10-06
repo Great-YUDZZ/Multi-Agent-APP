@@ -204,16 +204,17 @@ fn execute_command(command: String, cwd: Option<String>) -> Result<CommandResult
 fn create_system_shortcuts(desktop: bool, start_menu: bool) -> Result<String, String> {
     #[cfg(target_os = "linux")]
     {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
         let exec_path = std::env::var("APPIMAGE")
             .unwrap_or_else(|_| {
                 std::env::current_exe()
                     .map(|p| p.to_string_lossy().to_string())
-                    .unwrap_or_else(|_| "multi-agent-desktop".to_string())
+                    .unwrap_or_else(|_| "multi-agent-app".to_string())
             });
 
         let icon_path = format!("{}/.local/share/icons/multi-agent-app.png", home);
         let desktop_entry = format!(
-            "[Desktop Entry]\nType=Application\nName=Multi-Agent Desktop\nGenericName=AI Agent Workspace\nComment=Modern AI Multi-Agent Workspace\nExec=\"{}\" %U\nIcon={}\nTerminal=false\nCategories=Development;IDE;Utility;\nStartupWMClass=app\n",
+            "[Desktop Entry]\nType=Application\nName=Multi-Agent APP\nGenericName=AI Agent Workspace\nComment=Modern AI Multi-Agent Workspace\nExec=\"{}\" %U\nIcon={}\nTerminal=false\nCategories=Development;IDE;Utility;\nStartupWMClass=multi-agent-app\n",
             exec_path, icon_path
         );
 
