@@ -21,7 +21,7 @@ pub struct CommandResult {
 }
 
 #[tauri::command]
-pub fn list_directory(dir_path: String) -> Result<Vec<FileEntry>, String> {
+fn list_directory(dir_path: String) -> Result<Vec<FileEntry>, String> {
     let path = Path::new(&dir_path);
     if !path.exists() {
         return Err(format!("Direktori tidak ditemukan: {}", dir_path));
@@ -55,17 +55,17 @@ pub fn list_directory(dir_path: String) -> Result<Vec<FileEntry>, String> {
 }
 
 #[tauri::command]
-pub fn read_file_content(file_path: String) -> Result<String, String> {
+fn read_file_content(file_path: String) -> Result<String, String> {
     fs::read_to_string(&file_path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn save_file_content(file_path: String, content: String) -> Result<(), String> {
+fn save_file_content(file_path: String, content: String) -> Result<(), String> {
     fs::write(&file_path, content).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn execute_command(command: String, cwd: Option<String>) -> Result<CommandResult, String> {
+fn execute_command(command: String, cwd: Option<String>) -> Result<CommandResult, String> {
     let start = Instant::now();
     let mut cmd = if cfg!(target_os = "windows") {
         let mut c = Command::new("cmd");
