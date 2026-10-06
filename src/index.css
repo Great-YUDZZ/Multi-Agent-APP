@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --vscode-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --vscode-font-mono: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', Consolas, 'Courier New', monospace;
+  --vscode-editor-bg: #1e1e1e;
+  --vscode-sidebar-bg: #252526;
+  --vscode-titlebar-bg: #1f1f1f;
+  --vscode-input-bg: #3c3c3c;
+  --vscode-border: #2d2d2d;
+  --vscode-hover: #2a2d2e;
+  --vscode-selected: #37373d;
+  --vscode-blue: #007acc;
+  --vscode-blue-hover: #1177bb;
+  --vscode-fg: #cccccc;
+  --vscode-fg-muted: #858585;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--vscode-editor-bg);
+  color: var(--vscode-fg);
+  font-family: var(--vscode-font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+}
+
+/* VS Code Style Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(121, 121, 121, 0.4);
+  border-radius: 0px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.7);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+code, kbd, samp, pre {
+  font-family: var(--vscode-font-mono);
+}
