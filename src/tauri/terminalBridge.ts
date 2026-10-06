@@ -6,6 +6,7 @@ export interface CommandResult {
   stderr: string;
   exit_code: number;
   duration_ms: number;
+  new_cwd?: string;
 }
 
 export async function executeTerminalCommand(

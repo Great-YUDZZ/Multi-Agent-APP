@@ -1,7 +1,7 @@
 import type { Agent, Session, UserProfile } from '../types';
 
 export const initialUserProfile: UserProfile = {
-  displayName: 'Yuda',
+  displayName: 'User',
   onboardingCompleted: true,
   theme: 'dark',
   fontSize: 'Sedang',

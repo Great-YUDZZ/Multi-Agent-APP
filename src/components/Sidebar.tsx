@@ -14,6 +14,7 @@ import {
   ChevronRight,
   RefreshCw,
   Terminal as TerminalIcon,
+  ArrowUp,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { listDirectory, type FileEntry } from '../tauri/fsBridge';
@@ -27,6 +28,8 @@ interface SidebarProps {
   onSelectFile?: (file: FileEntry) => void;
   onToggleTerminal?: () => void;
   isTerminalOpen?: boolean;
+  workspacePath?: string;
+  onOpenFolder?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -38,17 +41,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectFile,
   onToggleTerminal,
   isTerminalOpen = false,
+  workspacePath,
+  onOpenFolder,
 }) => {
   const [projectOpen, setProjectOpen] = useState(true);
   const [isGearSpinning, setIsGearSpinning] = useState(false);
   const [workspaceFiles, setWorkspaceFiles] = useState<FileEntry[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+  const [currentPath, setCurrentPath] = useState<string>(workspacePath || '');
 
-  const loadWorkspaceFiles = async () => {
+  const loadWorkspaceFiles = async (dirToLoad?: string) => {
     setIsLoadingFiles(true);
+    const target = dirToLoad !== undefined ? dirToLoad : (currentPath || workspacePath || '.');
     try {
-      const files = await listDirectory('.');
+      const files = await listDirectory(target);
       setWorkspaceFiles(files);
+      setCurrentPath(target);
     } catch (err) {
       console.error('Failed to list workspace files:', err);
     } finally {
@@ -57,8 +65,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   useEffect(() => {
-    loadWorkspaceFiles();
-  }, []);
+    if (workspacePath) {
+      setCurrentPath(workspacePath);
+      loadWorkspaceFiles(workspacePath);
+    } else {
+      loadWorkspaceFiles('.');
+    }
+  }, [workspacePath]);
 
   const handleSettingsClick = () => {
     setIsGearSpinning(true);
@@ -85,11 +98,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleFileClick = (file: FileEntry) => {
-    if (file.is_dir) return;
+    if (file.is_dir) {
+      loadWorkspaceFiles(file.path);
+      return;
+    }
     if (onSelectFile) {
       onSelectFile(file);
     }
     setActiveTab('file');
+  };
+
+  const handleGoUp = () => {
+    if (!currentPath || currentPath === '.' || currentPath === '/') return;
+    const parts = currentPath.split('/').filter(Boolean);
+    if (parts.length <= 1) {
+      loadWorkspaceFiles('/');
+    } else {
+      parts.pop();
+      loadWorkspaceFiles('/' + parts.join('/'));
+    }
   };
 
   return (
@@ -197,10 +224,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Projects Tree Section (VS Code Explorer Aesthetic) */}
         <div className="pt-2 border-t border-[#2d2d2d] flex-1 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between text-[11px] text-[#bbbbbb] font-bold tracking-wider px-2 py-1 shrink-0">
-            <span className="truncate">EXPLORER: WORKSPACE</span>
-            <div className="flex items-center gap-1.5">
+            <span className="truncate" title={currentPath || 'Workspace Saat Ini'}>
+              {currentPath && currentPath !== '.'
+                ? `EXPLORER: ${currentPath.split('/').filter(Boolean).pop() || currentPath}`
+                : 'EXPLORER: WORKSPACE'}
+            </span>
+            <div className="flex items-center gap-1">
+              {currentPath && currentPath !== '.' && currentPath !== '/' && (
+                <button
+                  onClick={handleGoUp}
+                  title="Naik ke folder induk"
+                  className="hover:text-white text-[#858585] p-0.5 rounded transition-colors"
+                >
+                  <ArrowUp size={12} />
+                </button>
+              )}
+              {onOpenFolder && (
+                <button
+                  onClick={onOpenFolder}
+                  title="Buka Folder dari Perangkat..."
+                  className="hover:text-white text-[#858585] p-0.5 rounded transition-colors"
+                >
+                  <FolderOpen size={12} />
+                </button>
+              )}
               <button
-                onClick={loadWorkspaceFiles}
+                onClick={() => loadWorkspaceFiles()}
                 title="Muat Ulang Berkas"
                 className="hover:text-white text-[#858585] p-0.5 rounded transition-colors"
               >
@@ -211,10 +260,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <div className="flex-1 overflow-y-auto space-y-0.5 text-xs text-[#cccccc] mt-1 pr-1">
             {workspaceFiles.length === 0 ? (
-              <div className="py-8 px-3 text-center space-y-1.5">
-                <Folder size={22} className="mx-auto text-[#444444]" />
-                <div className="text-[11px] text-[#888888]">Belum ada berkas terbuka</div>
-                <div className="text-[10px] text-[#666666]">Gunakan File &gt; Open Folder untuk memulai proyek</div>
+              <div className="py-8 px-3 text-center space-y-2">
+                <Folder size={24} className="mx-auto text-[#555555]" />
+                <div className="text-[11px] font-medium text-[#cccccc]">
+                  {currentPath ? 'Folder Kosong' : 'Belum Ada Folder Terbuka'}
+                </div>
+                <div className="text-[10px] text-[#858585] leading-relaxed">
+                  Buka folder perangkat untuk melihat dan mengedit berkas kode.
+                </div>
+                {onOpenFolder && (
+                  <button
+                    onClick={onOpenFolder}
+                    className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1 bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#007acc] text-white rounded text-[11px] font-medium transition-colors shadow-sm"
+                  >
+                    <FolderOpen size={12} />
+                    <span>Buka Folder Perangkat</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div>

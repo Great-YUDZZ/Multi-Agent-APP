@@ -63,3 +63,28 @@ export async function createSystemShortcuts(desktop: boolean, startMenu: boolean
   return { success: true, message: 'Shortcut dibuat (lingkungan peramban/web preview).' };
 }
 
+export async function selectFolderDialog(): Promise<string | null> {
+  if (isTauriEnvironment()) {
+    try {
+      const path = await invoke<string | null>('select_folder_dialog');
+      return path;
+    } catch (err) {
+      console.warn('select_folder_dialog error:', err);
+      return null;
+    }
+  }
+  return null;
+}
+
+export async function getCurrentWorkingDir(): Promise<string> {
+  if (isTauriEnvironment()) {
+    try {
+      return await invoke<string>('get_current_working_dir');
+    } catch (err) {
+      console.warn('get_current_working_dir error:', err);
+    }
+  }
+  return '.';
+}
+
+

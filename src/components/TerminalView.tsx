@@ -7,7 +7,7 @@ import {
   X,
 } from 'lucide-react';
 import { executeTerminalCommand, type CommandResult } from '../tauri/terminalBridge';
-import { isTauriEnvironment } from '../tauri/fsBridge';
+import { isTauriEnvironment, getCurrentWorkingDir } from '../tauri/fsBridge';
 
 interface TerminalEntry {
   id: string;
@@ -35,11 +35,20 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   const [entries, setEntries] = useState<TerminalEntry[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
-  const [cwd, setCwd] = useState<string>('~/Multi-Agent-APP');
+  const [cwd, setCwd] = useState<string>('~');
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isNative = isTauriEnvironment();
+
+  // Load real current working directory on mount
+  useEffect(() => {
+    getCurrentWorkingDir().then((dir) => {
+      if (dir && dir !== '.') {
+        setCwd(dir);
+      }
+    });
+  }, []);
 
   // Auto-scroll when new command or result appears
   useEffect(() => {
@@ -80,18 +89,10 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
     setInputVal('');
 
     try {
-      const res = await executeTerminalCommand(trimmed, cwd === '~/Multi-Agent-APP' ? '.' : cwd);
+      const res = await executeTerminalCommand(trimmed, cwd);
 
-      // Update CWD if user typed 'cd'
-      if (trimmed.startsWith('cd ') && res.exit_code === 0) {
-        const target = trimmed.substring(3).trim();
-        if (target === '..') {
-          setCwd('~/');
-        } else if (target === '~' || target === '') {
-          setCwd('~/');
-        } else {
-          setCwd(`~/Multi-Agent-APP/${target}`);
-        }
+      if (res.new_cwd) {
+        setCwd(res.new_cwd);
       }
 
       setEntries((prev) =>

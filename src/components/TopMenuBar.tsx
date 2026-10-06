@@ -95,11 +95,11 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
   return (
     <div
       ref={menuBarRef}
-      className="h-8 w-full bg-[#1f1f1f] border-b border-[#2d2d2d] flex items-center px-3 text-xs text-[#969696] select-none z-40 font-sans relative"
+      className="h-8.5 w-full bg-[#1f1f1f] border-b border-[#2d2d2d] flex items-center px-3 text-xs text-[#969696] select-none z-40 font-sans relative"
     >
       {/* Brand Logo & Name */}
-      <div className="flex items-center gap-2 mr-3">
-        <img src="/logo.png" alt="Multi-Agent Logo" className="w-4 h-4 rounded-sm object-cover shadow-sm" />
+      <div className="flex items-center gap-2.5 mr-3">
+        <img src="/logo.png" alt="Multi-Agent Logo" className="w-6 h-6 object-contain drop-shadow-md shrink-0" />
         <span
           onClick={() => onOpenAbout?.()}
           className="font-semibold text-[#cccccc] hover:text-white cursor-pointer transition-colors"

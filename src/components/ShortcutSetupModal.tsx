@@ -62,8 +62,8 @@ export const ShortcutSetupModal: React.FC<ShortcutSetupModalProps> = ({
         >
           {/* Header with CubesLogo */}
           <div className="bg-white/[0.03] border-b border-white/[0.07] px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CubesLogo size={30} withGlow={true} />
+            <div className="flex items-center gap-4">
+              <CubesLogo size={58} withGlow={true} />
               <div>
                 <h3 className="text-sm font-semibold text-white tracking-wide">
                   Selamat Datang di Multi-Agent Desktop

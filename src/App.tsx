@@ -18,7 +18,7 @@ import { AgentStore } from './storage/AgentStore';
 import { HelpDocumentationModal, type HelpTabType } from './components/HelpDocumentationModal';
 import { ShortcutSetupModal } from './components/ShortcutSetupModal';
 import type { Agent, Session, SessionMessage, UserProfile, DiscussionModeType, CommandApprovalRequest, AttachedFile } from './types';
-import type { FileEntry } from './tauri/fsBridge';
+import { selectFolderDialog, type FileEntry } from './tauri/fsBridge';
 import { Box, FileText, CheckCircle2, Terminal as TerminalIcon, Copy, Check, Download, Paperclip } from 'lucide-react';
 import { ToastContainer, type ToastMessage } from './components/Toast';
 
@@ -52,6 +52,24 @@ export function App() {
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'chat' | 'history' | 'artifact' | 'file'>(initialTab);
   const [selectedFile, setSelectedFile] = useState<FileEntry | null>(initialFile);
+  const [workspacePath, setWorkspacePath] = useState<string>(() => {
+    return localStorage.getItem('multi_agent_workspace_dir') || '';
+  });
+
+  const handleOpenFolder = async () => {
+    try {
+      const selected = await selectFolderDialog();
+      if (selected) {
+        setWorkspacePath(selected);
+        localStorage.setItem('multi_agent_workspace_dir', selected);
+        setActiveTab('file');
+        addToast('success', `Workspace dibuka: ${selected}`);
+      }
+    } catch (err) {
+      console.error('Failed to select folder:', err);
+      addToast('error', 'Gagal membuka dialog folder');
+    }
+  };
 
   // Terminal state
   const [isTerminalOpen, setIsTerminalOpen] = useState(initialTerminal);
@@ -153,8 +171,7 @@ export function App() {
       case 'open-file':
       case 'open-folder':
       case 'open-workspace':
-        setActiveTab('file');
-        addToast('info', 'Gunakan Explorer pada panel samping untuk menelusuri berkas');
+        handleOpenFolder();
         break;
       case 'open-recent':
         setActiveTab('history');
@@ -478,6 +495,8 @@ export function App() {
           onSelectFile={(file) => setSelectedFile(file)}
           onToggleTerminal={() => setIsTerminalOpen((prev) => !prev)}
           isTerminalOpen={isTerminalOpen}
+          workspacePath={workspacePath}
+          onOpenFolder={handleOpenFolder}
         />
 
         {/* Center Main Stage + Terminal Dock */}

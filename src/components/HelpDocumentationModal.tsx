@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CubesLogo } from './CubesLogo';
 
 export type HelpTabType =
   | 'overview'
@@ -56,8 +57,8 @@ export const HelpDocumentationModal: React.FC<HelpDocumentationModalProps> = ({
         >
           {/* Modal Header */}
           <div className="h-12 bg-[#252526] border-b border-[#2d2d2d] px-5 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5">
-              <img src="/logo.png" alt="Logo" className="w-5 h-5 rounded-sm shadow-sm" />
+            <div className="flex items-center gap-3">
+              <CubesLogo size={26} withGlow={true} />
               <h2 className="text-xs font-bold text-white uppercase tracking-wider">
                 Dokumentasi & Pusat Bantuan Multi-Agent Desktop
               </h2>

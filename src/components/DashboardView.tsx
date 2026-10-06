@@ -13,6 +13,7 @@ import {
 import { motion } from 'framer-motion';
 import type { Session, Agent } from '../types';
 import { globalSkillRegistry } from '../skills/SkillRegistry';
+import { CubesLogo } from './CubesLogo';
 
 interface DashboardViewProps {
   sessions: Session[];
@@ -43,8 +44,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="flex-1 flex flex-col h-full bg-[#1e1e1e] text-[#cccccc] font-sans select-none overflow-y-auto">
       {/* Dashboard Top Header */}
       <div className="h-14 border-b border-[#2d2d2d] bg-[#252526] px-8 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Multi-Agent Logo" className="w-8 h-8 rounded-lg object-cover border border-[#333333] shadow-md" />
+        <div className="flex items-center gap-3.5">
+          <CubesLogo size={36} withGlow={true} />
           <div>
             <h1 className="text-xs font-bold text-white uppercase tracking-wider">
               Mission Control & Workspace Dashboard

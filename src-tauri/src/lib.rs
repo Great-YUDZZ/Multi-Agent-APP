@@ -18,13 +18,85 @@ pub struct CommandResult {
     pub stderr: String,
     pub exit_code: i32,
     pub duration_ms: u128,
+    pub new_cwd: Option<String>,
+}
+
+#[tauri::command]
+fn get_current_working_dir() -> Result<String, String> {
+    std::env::current_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn select_folder_dialog() -> Result<Option<String>, String> {
+    #[cfg(target_os = "linux")]
+    {
+        // Try zenity first (common on Ubuntu, Debian, GNOME)
+        if let Ok(output) = Command::new("zenity")
+            .args(["--file-selection", "--directory", "--title=Pilih Folder Workspace"])
+            .output()
+        {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !path.is_empty() {
+                    return Ok(Some(path));
+                }
+            }
+        }
+        // Try kdialog (KDE Plasma)
+        if let Ok(output) = Command::new("kdialog")
+            .args(["--getexistingdirectory", "."])
+            .output()
+        {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !path.is_empty() {
+                    return Ok(Some(path));
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let script = r#"
+        Add-Type -AssemblyName System.Windows.Forms
+        $f = New-Object System.Windows.Forms.FolderBrowserDialog
+        if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+            Write-Output $f.SelectedPath
+        }
+        "#;
+        if let Ok(output) = Command::new("powershell")
+            .args(["-NoProfile", "-Command", script])
+            .output()
+        {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !path.is_empty() {
+                    return Ok(Some(path));
+                }
+            }
+        }
+    }
+
+    Ok(None)
 }
 
 #[tauri::command]
 fn list_directory(dir_path: String) -> Result<Vec<FileEntry>, String> {
-    let path = Path::new(&dir_path);
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let expanded_path = if dir_path.starts_with("~/") {
+        dir_path.replacen("~", &home, 1)
+    } else if dir_path == "~" {
+        home
+    } else {
+        dir_path
+    };
+
+    let path = Path::new(&expanded_path);
     if !path.exists() {
-        return Err(format!("Direktori tidak ditemukan: {}", dir_path));
+        return Err(format!("Direktori tidak ditemukan: {}", expanded_path));
     }
 
     let entries = fs::read_dir(path).map_err(|e| e.to_string())?;
@@ -67,18 +139,33 @@ fn save_file_content(file_path: String, content: String) -> Result<(), String> {
 #[tauri::command]
 fn execute_command(command: String, cwd: Option<String>) -> Result<CommandResult, String> {
     let start = Instant::now();
-    let mut cmd = if cfg!(target_os = "windows") {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+
+    let resolved_cwd = cwd.map(|dir| {
+        if dir.starts_with("~/") {
+            dir.replacen("~", &home, 1)
+        } else if dir == "~" {
+            home.clone()
+        } else {
+            dir
+        }
+    });
+
+    let delimiter = "___CWD_DELIM___";
+    let (mut cmd, is_cd) = if cfg!(target_os = "windows") {
         let mut c = Command::new("cmd");
-        c.args(["/C", &command]);
-        c
+        let wrapped = format!("{} & echo {} & cd", command, delimiter);
+        c.args(["/C", &wrapped]);
+        (c, command.trim().to_lowercase().starts_with("cd"))
     } else {
         let mut c = Command::new("sh");
-        c.args(["-c", &command]);
-        c
+        let wrapped = format!("{{ {} ; }} ; __RET=$? ; echo '{}' ; pwd ; exit $__RET", command, delimiter);
+        c.args(["-c", &wrapped]);
+        (c, command.trim().starts_with("cd"))
     };
 
-    if let Some(dir) = cwd {
-        if !dir.is_empty() {
+    if let Some(ref dir) = resolved_cwd {
+        if !dir.is_empty() && Path::new(dir).exists() {
             cmd.current_dir(dir);
         }
     }
@@ -86,12 +173,27 @@ fn execute_command(command: String, cwd: Option<String>) -> Result<CommandResult
     match cmd.output() {
         Ok(output) => {
             let duration = start.elapsed().as_millis();
+            let raw_stdout = String::from_utf8_lossy(&output.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
             let exit_code = output.status.code().unwrap_or(if output.status.success() { 0 } else { 1 });
+
+            let mut stdout = raw_stdout.clone();
+            let mut new_cwd = None;
+
+            if let Some(pos) = raw_stdout.rfind(delimiter) {
+                stdout = raw_stdout[..pos].trim_end_matches('\n').trim_end_matches('\r').to_string();
+                let after = raw_stdout[pos + delimiter.len()..].trim();
+                if !after.is_empty() && (is_cd || exit_code == 0) {
+                    new_cwd = Some(after.to_string());
+                }
+            }
+
             Ok(CommandResult {
-                stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-                stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+                stdout,
+                stderr,
                 exit_code,
                 duration_ms: duration,
+                new_cwd,
             })
         }
         Err(e) => Err(format!("Gagal mengeksekusi perintah terminal: {}", e)),
@@ -203,7 +305,9 @@ pub fn run() {
             read_file_content,
             save_file_content,
             execute_command,
-            create_system_shortcuts
+            create_system_shortcuts,
+            select_folder_dialog,
+            get_current_working_dir
         ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");
