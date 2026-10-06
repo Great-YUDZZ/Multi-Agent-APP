@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  LayoutDashboard,
   Play,
   Plus,
   Users,
@@ -45,9 +44,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Dashboard Top Header */}
       <div className="h-14 border-b border-[#2d2d2d] bg-[#252526] px-8 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-[#1e3a2f] border border-[#4ec9b0]/40 flex items-center justify-center text-[#4ec9b0]">
-            <LayoutDashboard size={18} />
-          </div>
+          <img src="/logo.png" alt="Multi-Agent Logo" className="w-8 h-8 rounded-lg object-cover border border-[#333333] shadow-md" />
           <div>
             <h1 className="text-xs font-bold text-white uppercase tracking-wider">
               Mission Control & Workspace Dashboard

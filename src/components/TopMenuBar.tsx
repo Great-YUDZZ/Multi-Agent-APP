@@ -12,9 +12,7 @@ export const TopMenuBar: React.FC<TopMenuBarProps> = ({
   return (
     <div className="h-8 w-full bg-[#1f1f1f] border-b border-[#2d2d2d] flex items-center px-3 space-x-3 text-xs text-[#969696] select-none z-10 font-sans">
       <div className="flex items-center gap-2 mr-2">
-        <svg className="w-4 h-4 text-[#007acc]" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.5 2.5L7.2 12.8 17.5 23.1 22 20.8 14 12.8 22 4.8zM2 7.5v9l5.5-4.5z"/>
-        </svg>
+        <img src="/logo.png" alt="Multi-Agent Logo" className="w-4 h-4 rounded-sm object-cover shadow-sm" />
         <span className="font-semibold text-[#cccccc] hover:text-white cursor-pointer transition-colors">
           Multi-Agent Desktop
         </span>
