@@ -1,8 +1,22 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::sync::Mutex;
 use std::time::Instant;
+use tauri::Emitter;
+
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
+
+static ACTIVE_PROCESS_PID: Mutex<Option<u32>> = Mutex::new(None);
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TerminalStreamPayload {
+    pub text: String,
+    pub is_stderr: bool,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FileEntry {
@@ -137,68 +151,165 @@ fn save_file_content(file_path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn execute_command(command: String, cwd: Option<String>) -> Result<CommandResult, String> {
-    let start = Instant::now();
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+async fn execute_command(
+    app: tauri::AppHandle,
+    command: String,
+    cwd: Option<String>,
+) -> Result<CommandResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let start = Instant::now();
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
 
-    let resolved_cwd = cwd.map(|dir| {
-        if dir.starts_with("~/") {
-            dir.replacen("~", &home, 1)
-        } else if dir == "~" {
-            home.clone()
+        let resolved_cwd = cwd.map(|dir| {
+            if dir.starts_with("~/") {
+                dir.replacen("~", &home, 1)
+            } else if dir == "~" {
+                home.clone()
+            } else {
+                dir
+            }
+        });
+
+        let delimiter = "___CWD_DELIM___";
+        let (mut cmd, is_cd) = if cfg!(target_os = "windows") {
+            let mut c = Command::new("cmd");
+            let wrapped = format!("{} & echo {} & cd", command, delimiter);
+            c.args(["/C", &wrapped]);
+            (c, command.trim().to_lowercase().starts_with("cd"))
         } else {
-            dir
+            let mut c = Command::new("sh");
+            let wrapped = format!("{{ {} ; }} ; __RET=$? ; echo '{}' ; pwd ; exit $__RET", command, delimiter);
+            c.args(["-c", &wrapped]);
+            #[cfg(unix)]
+            c.process_group(0);
+            (c, command.trim().starts_with("cd"))
+        };
+
+        if let Some(ref dir) = resolved_cwd {
+            if !dir.is_empty() && Path::new(dir).exists() {
+                cmd.current_dir(dir);
+            }
         }
-    });
 
-    let delimiter = "___CWD_DELIM___";
-    let (mut cmd, is_cd) = if cfg!(target_os = "windows") {
-        let mut c = Command::new("cmd");
-        let wrapped = format!("{} & echo {} & cd", command, delimiter);
-        c.args(["/C", &wrapped]);
-        (c, command.trim().to_lowercase().starts_with("cd"))
-    } else {
-        let mut c = Command::new("sh");
-        let wrapped = format!("{{ {} ; }} ; __RET=$? ; echo '{}' ; pwd ; exit $__RET", command, delimiter);
-        c.args(["-c", &wrapped]);
-        (c, command.trim().starts_with("cd"))
-    };
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::piped());
 
-    if let Some(ref dir) = resolved_cwd {
-        if !dir.is_empty() && Path::new(dir).exists() {
-            cmd.current_dir(dir);
+        let mut child = cmd.spawn().map_err(|e| format!("Gagal mengeksekusi perintah terminal: {}", e))?;
+        let pid = child.id();
+        {
+            let mut lock = ACTIVE_PROCESS_PID.lock().unwrap();
+            *lock = Some(pid);
         }
-    }
 
-    match cmd.output() {
-        Ok(output) => {
-            let duration = start.elapsed().as_millis();
-            let raw_stdout = String::from_utf8_lossy(&output.stdout).to_string();
-            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-            let exit_code = output.status.code().unwrap_or(if output.status.success() { 0 } else { 1 });
+        let stdout = child.stdout.take();
+        let stderr = child.stderr.take();
 
-            let mut stdout = raw_stdout.clone();
-            let mut new_cwd = None;
-
-            if let Some(pos) = raw_stdout.rfind(delimiter) {
-                stdout = raw_stdout[..pos].trim_end_matches('\n').trim_end_matches('\r').to_string();
-                let after = raw_stdout[pos + delimiter.len()..].trim();
-                if !after.is_empty() && (is_cd || exit_code == 0) {
-                    new_cwd = Some(after.to_string());
+        let app_out = app.clone();
+        let stdout_handle = std::thread::spawn(move || {
+            let mut collected = String::new();
+            if let Some(out) = stdout {
+                let reader = BufReader::new(out);
+                for line in reader.lines() {
+                    if let Ok(l) = line {
+                        if !l.contains("___CWD_DELIM___") {
+                            let _ = app_out.emit("terminal_stream", TerminalStreamPayload {
+                                text: format!("{}\n", l),
+                                is_stderr: false,
+                            });
+                        }
+                        collected.push_str(&l);
+                        collected.push('\n');
+                    }
                 }
             }
+            collected
+        });
 
-            Ok(CommandResult {
-                stdout,
-                stderr,
-                exit_code,
-                duration_ms: duration,
-                new_cwd,
-            })
+        let app_err = app.clone();
+        let stderr_handle = std::thread::spawn(move || {
+            let mut collected = String::new();
+            if let Some(err) = stderr {
+                let reader = BufReader::new(err);
+                for line in reader.lines() {
+                    if let Ok(l) = line {
+                        let _ = app_err.emit("terminal_stream", TerminalStreamPayload {
+                            text: format!("{}\n", l),
+                            is_stderr: true,
+                        });
+                        collected.push_str(&l);
+                        collected.push('\n');
+                    }
+                }
+            }
+            collected
+        });
+
+        let status = child.wait().map_err(|e| format!("Gagal menunggu proses: {}", e))?;
+
+        // Clear active PID
+        {
+            let mut lock = ACTIVE_PROCESS_PID.lock().unwrap();
+            if *lock == Some(pid) {
+                *lock = None;
+            }
         }
-        Err(e) => Err(format!("Gagal mengeksekusi perintah terminal: {}", e)),
+
+        let raw_stdout = stdout_handle.join().unwrap_or_default();
+        let stderr = stderr_handle.join().unwrap_or_default();
+        let duration = start.elapsed().as_millis();
+        let exit_code = status.code().unwrap_or(if status.success() { 0 } else { 1 });
+
+        let mut stdout = raw_stdout.clone();
+        let mut new_cwd = None;
+
+        if let Some(pos) = raw_stdout.rfind(delimiter) {
+            stdout = raw_stdout[..pos].trim_end_matches('\n').trim_end_matches('\r').to_string();
+            let after = raw_stdout[pos + delimiter.len()..].trim();
+            if !after.is_empty() && (is_cd || exit_code == 0) {
+                new_cwd = Some(after.to_string());
+            }
+        }
+
+        Ok(CommandResult {
+            stdout,
+            stderr,
+            exit_code,
+            duration_ms: duration,
+            new_cwd,
+        })
+    })
+    .await
+    .map_err(|e| format!("Task execution failed: {}", e))?
+}
+
+#[tauri::command]
+fn cancel_command() -> Result<bool, String> {
+    let pid_opt = {
+        let mut lock = ACTIVE_PROCESS_PID.lock().unwrap();
+        lock.take()
+    };
+
+    if let Some(pid) = pid_opt {
+        #[cfg(target_os = "windows")]
+        {
+            let _ = Command::new("taskkill")
+                .args(["/PID", &pid.to_string(), "/T", "/F"])
+                .output();
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let pgid_arg = format!("-{}", pid);
+            let _ = Command::new("kill").args(["-INT", &pgid_arg]).output();
+            let _ = Command::new("kill").args(["-INT", &pid.to_string()]).output();
+            let _ = Command::new("kill").args(["-TERM", &pgid_arg]).output();
+            let _ = Command::new("kill").args(["-TERM", &pid.to_string()]).output();
+        }
+        Ok(true)
+    } else {
+        Ok(false)
     }
 }
+
 
 #[tauri::command]
 fn create_system_shortcuts(desktop: bool, start_menu: bool) -> Result<String, String> {
@@ -306,6 +417,7 @@ pub fn run() {
             read_file_content,
             save_file_content,
             execute_command,
+            cancel_command,
             create_system_shortcuts,
             select_folder_dialog,
             get_current_working_dir

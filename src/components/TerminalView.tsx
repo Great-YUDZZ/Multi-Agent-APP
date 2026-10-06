@@ -5,8 +5,14 @@ import {
   Maximize2,
   Minimize2,
   X,
+  Square,
 } from 'lucide-react';
-import { executeTerminalCommand, type CommandResult } from '../tauri/terminalBridge';
+import { listen } from '@tauri-apps/api/event';
+import {
+  executeTerminalCommand,
+  cancelTerminalCommand,
+  type CommandResult,
+} from '../tauri/terminalBridge';
 import { isTauriEnvironment, getCurrentWorkingDir } from '../tauri/fsBridge';
 
 interface TerminalEntry {
@@ -15,6 +21,11 @@ interface TerminalEntry {
   timestamp: number;
   result?: CommandResult;
   isLoading?: boolean;
+}
+
+interface TerminalStreamPayload {
+  text: string;
+  is_stderr: boolean;
 }
 
 interface TerminalViewProps {
@@ -40,6 +51,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isNative = isTauriEnvironment();
+  const isAnyLoading = entries.some((e) => e.isLoading);
 
   // Load real current working directory on mount
   useEffect(() => {
@@ -50,7 +62,44 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
     });
   }, []);
 
-  // Auto-scroll when new command or result appears
+  // Listen to live stdout / stderr stream from Tauri backend
+  useEffect(() => {
+    if (!isNative) return;
+
+    let unlistenFn: (() => void) | null = null;
+    listen<TerminalStreamPayload>('terminal_stream', (event) => {
+      setEntries((prev) => {
+        if (prev.length === 0) return prev;
+        const lastIndex = prev.length - 1;
+        const last = prev[lastIndex];
+        if (!last.isLoading) return prev;
+
+        const currentStdout = last.result?.stdout || '';
+        const currentStderr = last.result?.stderr || '';
+
+        const updatedResult: CommandResult = {
+          stdout: event.payload.is_stderr ? currentStdout : currentStdout + event.payload.text,
+          stderr: event.payload.is_stderr ? currentStderr + event.payload.text : currentStderr,
+          exit_code: last.result?.exit_code ?? 0,
+          duration_ms: last.result?.duration_ms ?? 0,
+          new_cwd: last.result?.new_cwd,
+        };
+
+        return [
+          ...prev.slice(0, lastIndex),
+          { ...last, result: updatedResult },
+        ];
+      });
+    }).then((unlisten) => {
+      unlistenFn = unlisten;
+    });
+
+    return () => {
+      if (unlistenFn) unlistenFn();
+    };
+  }, [isNative]);
+
+  // Auto-scroll when new command or stream chunk appears
   useEffect(() => {
     if (isOpen) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -63,6 +112,48 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       inputRef.current?.focus();
     }
   }, [isOpen]);
+
+  const handleCancelCommand = async () => {
+    await cancelTerminalCommand();
+    setEntries((prev) => {
+      if (prev.length === 0) return prev;
+      const lastIndex = prev.length - 1;
+      const last = prev[lastIndex];
+      if (!last.isLoading) return prev;
+
+      const currentStdout = (last.result?.stdout || '') + '^C\n';
+      return [
+        ...prev.slice(0, lastIndex),
+        {
+          ...last,
+          isLoading: false,
+          result: {
+            stdout: currentStdout,
+            stderr: last.result?.stderr || '',
+            exit_code: 130,
+            duration_ms: Date.now() - last.timestamp,
+            new_cwd: last.result?.new_cwd,
+          },
+        },
+      ];
+    });
+  };
+
+  // Global Ctrl+C handler when terminal is open
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+      if ((e.key === 'c' || e.key === 'C') && e.ctrlKey) {
+        const selection = window.getSelection()?.toString();
+        if (!selection && isAnyLoading) {
+          e.preventDefault();
+          handleCancelCommand();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isOpen, isAnyLoading]);
 
   const handleRunCommand = async (cmdToRun: string) => {
     const trimmed = cmdToRun.trim();
@@ -81,6 +172,12 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       command: trimmed,
       timestamp: Date.now(),
       isLoading: true,
+      result: {
+        stdout: '',
+        stderr: '',
+        exit_code: 0,
+        duration_ms: 0,
+      },
     };
 
     setEntries((prev) => [...prev, newEntry]);
@@ -97,7 +194,18 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
       setEntries((prev) =>
         prev.map((item) =>
-          item.id === entryId ? { ...item, result: res, isLoading: false } : item
+          item.id === entryId
+            ? {
+                ...item,
+                isLoading: false,
+                result: {
+                  ...res,
+                  // Keep whatever stream output was accumulated if final is empty
+                  stdout: res.stdout || item.result?.stdout || '',
+                  stderr: res.stderr || item.result?.stderr || '',
+                },
+              }
+            : item
         )
       );
     } catch (err) {
@@ -108,7 +216,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
                 ...item,
                 isLoading: false,
                 result: {
-                  stdout: '',
+                  stdout: item.result?.stdout || '',
                   stderr: String(err),
                   exit_code: 1,
                   duration_ms: 0,
@@ -121,6 +229,14 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if ((e.key === 'c' || e.key === 'C') && e.ctrlKey) {
+      if (isAnyLoading) {
+        e.preventDefault();
+        handleCancelCommand();
+        return;
+      }
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault();
       handleRunCommand(inputVal);
@@ -158,7 +274,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setActiveTab('terminal')}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-t font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-t font-medium transition-colors cursor-pointer ${
               activeTab === 'terminal'
                 ? 'bg-[#0c0c0c] text-white border-t-2 border-[#22c55e]'
                 : 'text-[#858585] hover:text-white'
@@ -177,40 +293,51 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
           <button
             onClick={() => setActiveTab('output')}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-t transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-t transition-colors cursor-pointer ${
               activeTab === 'output'
-                ? 'bg-[#0c0c0c] text-white border-t-2 border-[#22c55e]'
+                ? 'bg-[#0c0c0c] text-white border-t-2 border-[#38bdf8]'
                 : 'text-[#858585] hover:text-white'
             }`}
           >
-            <span className="text-[11px]">OUTPUT LOG</span>
+            <span className="font-sans text-[11px]">OUTPUT LOG</span>
           </button>
         </div>
 
-        {/* Action Controls */}
+        {/* Actions */}
         <div className="flex items-center gap-1.5 text-[#858585]">
+          {isAnyLoading && (
+            <button
+              onClick={handleCancelCommand}
+              title="Hentikan perintah yang berjalan (Ctrl+C)"
+              className="flex items-center gap-1 px-2 py-0.5 bg-[#e06c75]/20 hover:bg-[#e06c75]/35 text-[#e06c75] border border-[#e06c75]/40 rounded text-[10px] font-medium transition-colors cursor-pointer mr-1 animate-pulse"
+            >
+              <Square size={8} className="fill-[#e06c75]" />
+              <span>Stop (Ctrl+C)</span>
+            </button>
+          )}
+
           <button
             onClick={() => setEntries([])}
+            title="Bersihkan Terminal (clear)"
             className="p-1 hover:text-white hover:bg-[#262626] rounded transition-colors cursor-pointer"
-            title="Clear Terminal (clear)"
           >
-            <Trash2 size={12} />
+            <Trash2 size={13} />
           </button>
 
           {onToggleMaximize && (
             <button
               onClick={onToggleMaximize}
+              title={isMaximized ? 'Perkecil Terminal' : 'Perbesar Terminal'}
               className="p-1 hover:text-white hover:bg-[#262626] rounded transition-colors cursor-pointer"
-              title={isMaximized ? 'Restore Panel' : 'Maximize Panel'}
             >
-              {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+              {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
             </button>
           )}
 
           <button
             onClick={onClose}
+            title="Tutup Terminal (Ctrl+`)"
             className="p-1 hover:text-white hover:bg-[#262626] rounded transition-colors cursor-pointer"
-            title="Close Terminal"
           >
             <X size={13} />
           </button>
@@ -221,13 +348,13 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       {activeTab === 'terminal' ? (
         <div
           onClick={() => inputRef.current?.focus()}
-          className="flex-1 flex flex-col p-3 overflow-y-auto font-mono text-[12px] leading-relaxed text-[#e5e5e5] bg-[#0c0c0c] cursor-text space-y-1.5"
+          className="flex-1 flex flex-col p-3 overflow-y-auto font-mono text-[12px] leading-relaxed text-[#e5e5e5] bg-[#0c0c0c] cursor-text space-y-1.5 custom-scrollbar"
         >
           {/* Minimal Terminal Host Banner */}
           <div className="text-[#737373] text-[11px] pb-1 select-none">
             Multi-Agent App Terminal [host: {isNative ? 'native-shell' : 'pty-bridge'}]
             <br />
-            Type commands and press Enter. 'clear' to clear console.
+            Ketik perintah shell lalu tekan Enter. Tekan Ctrl+C untuk membatalkan proses.
           </div>
 
           {/* Command History Entries */}
@@ -242,28 +369,35 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
                 <span className="text-[#f5f5f5] font-normal">{entry.command}</span>
               </div>
 
-              {/* Execution State */}
-              {entry.isLoading ? (
-                <div className="text-[#737373] text-[11px] pl-2 animate-pulse">
-                  [running...]
-                </div>
-              ) : entry.result ? (
+              {/* Real-time Streaming Output (renders live while running and retains after done) */}
+              {entry.result && (
                 <div className="pl-1">
-                  {/* Stdout Output */}
                   {entry.result.stdout && (
                     <pre className="whitespace-pre-wrap font-mono text-[#d4d4d4] text-[12px] leading-5">
                       {entry.result.stdout}
                     </pre>
                   )}
 
-                  {/* Stderr Error Output (Pure Raw Terminal Style) */}
                   {entry.result.stderr && (
                     <pre className="whitespace-pre-wrap font-mono text-[#ef4444] text-[12px] leading-5">
                       {entry.result.stderr}
                     </pre>
                   )}
                 </div>
-              ) : null}
+              )}
+
+              {/* Loading Indicator with In-line Cancel Button */}
+              {entry.isLoading && (
+                <div className="flex items-center gap-2 text-[#737373] text-[11px] pl-1 py-0.5">
+                  <span className="animate-pulse">[running...]</span>
+                  <button
+                    onClick={handleCancelCommand}
+                    className="px-1.5 py-0.5 bg-[#e06c75]/20 hover:bg-[#e06c75]/35 text-[#e06c75] border border-[#e06c75]/40 rounded text-[10px] font-sans transition-colors cursor-pointer"
+                  >
+                    Hentikan (Ctrl+C)
+                  </button>
+                </div>
+              )}
             </div>
           ))}
 
@@ -292,9 +426,9 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
         <div className="flex-1 p-3 overflow-y-auto text-[#a3a3a3] text-xs font-mono space-y-1 bg-[#0c0c0c]">
           <div className="text-white font-medium mb-1">[Multi-Agent Workspace Output Log]</div>
           <div>[INFO] Tauri native host shell initialized.</div>
-          <div>[INFO] Active Providers loaded from ProviderStore.</div>
-          <div>[INFO] Agent Registry ready with active skills.</div>
-          <div>[INFO] Session watcher active.</div>
+          <div>[INFO] Non-blocking process execution engine active.</div>
+          <div>[INFO] Real-time stdout/stderr stream listener registered.</div>
+          <div>[INFO] Process cancellation &amp; Ctrl+C signal handler ready.</div>
         </div>
       )}
     </div>

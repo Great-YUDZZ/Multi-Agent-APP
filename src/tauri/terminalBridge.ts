@@ -9,6 +9,18 @@ export interface CommandResult {
   new_cwd?: string;
 }
 
+export async function cancelTerminalCommand(): Promise<boolean> {
+  if (isTauriEnvironment()) {
+    try {
+      return await invoke<boolean>('cancel_command');
+    } catch (err) {
+      console.warn('cancel_command error:', err);
+      return false;
+    }
+  }
+  return true;
+}
+
 export async function executeTerminalCommand(
   command: string,
   cwd: string = '.'
