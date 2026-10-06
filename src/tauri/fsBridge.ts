@@ -11,26 +11,16 @@ export const isTauriEnvironment = (): boolean => {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 };
 
-// Fallback project files for browser preview mode
-const mockWorkspaceFiles: FileEntry[] = [
-  { name: 'src', path: 'src', is_dir: true, size: 0 },
-  { name: 'App.tsx', path: 'src/App.tsx', is_dir: false, size: 8420 },
-  { name: 'main.tsx', path: 'src/main.tsx', is_dir: false, size: 450 },
-  { name: 'plan.config.json', path: 'plan.config.json', is_dir: false, size: 1240 },
-  { name: 'package.json', path: 'package.json', is_dir: false, size: 980 },
-  { name: 'README.md', path: 'README.md', is_dir: false, size: 2150 },
-];
-
 export async function listDirectory(dirPath: string = '.'): Promise<FileEntry[]> {
   if (isTauriEnvironment()) {
     try {
       return await invoke<FileEntry[]>('list_directory', { dirPath });
     } catch (err) {
       console.warn('Tauri list_directory fallback:', err);
-      return mockWorkspaceFiles;
+      return [];
     }
   }
-  return mockWorkspaceFiles;
+  return [];
 }
 
 export async function readFileContent(filePath: string): Promise<string> {
@@ -42,20 +32,7 @@ export async function readFileContent(filePath: string): Promise<string> {
     }
   }
 
-  if (filePath.endsWith('.json')) {
-    return JSON.stringify(
-      {
-        name: 'multi-agent-project',
-        version: '1.0.0',
-        activeMode: 'plan',
-        agents: ['Researcher', 'Reviewer', 'QA', 'DevOps'],
-      },
-      null,
-      2
-    );
-  }
-
-  return `// Berkas: ${filePath}\n// Buka di lingkungan Tauri native untuk akses penuh filesystem lokal.`;
+  return `// Berkas: ${filePath}\n// Tidak ada konten berkas yang tersimpan.`;
 }
 
 export async function saveFileContent(filePath: string, content: string): Promise<boolean> {
@@ -70,3 +47,19 @@ export async function saveFileContent(filePath: string, content: string): Promis
   }
   return true;
 }
+
+export async function createSystemShortcuts(desktop: boolean, startMenu: boolean): Promise<{ success: boolean; message: string }> {
+  if (isTauriEnvironment()) {
+    try {
+      const res = await invoke<string>('create_system_shortcuts', {
+        desktop,
+        startMenu,
+      });
+      return { success: true, message: res };
+    } catch (err: any) {
+      return { success: false, message: err?.toString() || 'Gagal membuat shortcut sistem.' };
+    }
+  }
+  return { success: true, message: 'Shortcut dibuat (lingkungan peramban/web preview).' };
+}
+

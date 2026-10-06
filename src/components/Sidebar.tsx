@@ -16,7 +16,7 @@ import {
   Terminal as TerminalIcon,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { listDirectory, isTauriEnvironment, type FileEntry } from '../tauri/fsBridge';
+import { listDirectory, type FileEntry } from '../tauri/fsBridge';
 
 interface SidebarProps {
   onNewSession: () => void;
@@ -43,7 +43,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isGearSpinning, setIsGearSpinning] = useState(false);
   const [workspaceFiles, setWorkspaceFiles] = useState<FileEntry[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
-  const isNative = isTauriEnvironment();
 
   const loadWorkspaceFiles = async () => {
     setIsLoadingFiles(true);
@@ -200,9 +199,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center justify-between text-[11px] text-[#bbbbbb] font-bold tracking-wider px-2 py-1 shrink-0">
             <span className="truncate">EXPLORER: WORKSPACE</span>
             <div className="flex items-center gap-1.5">
-              <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${isNative ? 'bg-[#1e3a2f] text-[#4ec9b0]' : 'bg-[#333333] text-[#858585]'}`}>
-                {isNative ? 'TAURI' : 'MOCK'}
-              </span>
               <button
                 onClick={loadWorkspaceFiles}
                 title="Muat Ulang Berkas"
@@ -214,40 +210,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-0.5 text-xs text-[#cccccc] mt-1 pr-1">
-            {/* Project Root */}
-            <div>
-              <button
-                onClick={() => setProjectOpen(!projectOpen)}
-                className="w-full flex items-center gap-1 px-1.5 py-1 hover:bg-[#2a2d2e] rounded cursor-pointer transition-colors"
-              >
-                {projectOpen ? <ChevronDown size={13} className="text-[#858585]" /> : <ChevronRight size={13} className="text-[#858585]" />}
-                {projectOpen ? <FolderOpen size={14} className="text-[#dcb67a]" /> : <Folder size={14} className="text-[#dcb67a]" />}
-                <span className="truncate font-normal">Multi-Agent App</span>
-              </button>
+            {workspaceFiles.length === 0 ? (
+              <div className="py-8 px-3 text-center space-y-1.5">
+                <Folder size={22} className="mx-auto text-[#444444]" />
+                <div className="text-[11px] text-[#888888]">Belum ada berkas terbuka</div>
+                <div className="text-[10px] text-[#666666]">Gunakan File &gt; Open Folder untuk memulai proyek</div>
+              </div>
+            ) : (
+              <div>
+                <button
+                  onClick={() => setProjectOpen(!projectOpen)}
+                  className="w-full flex items-center gap-1 px-1.5 py-1 hover:bg-[#2a2d2e] rounded cursor-pointer transition-colors"
+                >
+                  {projectOpen ? <ChevronDown size={13} className="text-[#858585]" /> : <ChevronRight size={13} className="text-[#858585]" />}
+                  {projectOpen ? <FolderOpen size={14} className="text-[#dcb67a]" /> : <Folder size={14} className="text-[#dcb67a]" />}
+                  <span className="truncate font-normal">Workspace Project</span>
+                </button>
 
-              {projectOpen && (
-                <div className="ml-3 pl-1.5 border-l border-[#333333] space-y-0.5 mt-0.5">
-                  {workspaceFiles.map((file: FileEntry) => (
-                    <div
-                      key={file.path}
-                      onClick={() => handleFileClick(file)}
-                      className={`flex items-center gap-1.5 px-1.5 py-1 text-xs rounded cursor-pointer transition-colors ${
-                        selectedFile?.path === file.path && activeTab === 'file'
-                          ? 'bg-[#094771] text-white font-medium'
-                          : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
-                      }`}
-                    >
-                      {file.is_dir ? (
-                        <Folder size={13} className="text-[#dcb67a] shrink-0" />
-                      ) : (
-                        getFileIcon(file.name)
-                      )}
-                      <span className="truncate">{file.name}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                {projectOpen && (
+                  <div className="ml-3 pl-1.5 border-l border-[#333333] space-y-0.5 mt-0.5">
+                    {workspaceFiles.map((file: FileEntry) => (
+                      <div
+                        key={file.path}
+                        onClick={() => handleFileClick(file)}
+                        className={`flex items-center gap-1.5 px-1.5 py-1 text-xs rounded cursor-pointer transition-colors ${
+                          selectedFile?.path === file.path && activeTab === 'file'
+                            ? 'bg-[#094771] text-white font-medium'
+                            : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
+                        }`}
+                      >
+                        {file.is_dir ? (
+                          <Folder size={13} className="text-[#dcb67a] shrink-0" />
+                        ) : (
+                          getFileIcon(file.name)
+                        )}
+                        <span className="truncate">{file.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

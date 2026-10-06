@@ -69,46 +69,13 @@ export const initialAgents: Agent[] = [
 
 export const initialSessions: Session[] = [
   {
-    id: 'session-1',
-    title: 'Diskusi Skema PlanDocument',
-    createdAt: Date.now() - 3600000,
-    lastActiveAt: Date.now() - 600000,
+    id: 'session-default',
+    title: 'Sesi Baru',
+    createdAt: Date.now(),
+    lastActiveAt: Date.now(),
     mode: 'plan',
     participantAgentIds: ['agent-a', 'agent-b'],
     attachedFiles: [],
-    messages: [
-      {
-        id: 'msg-1',
-        timestamp: Date.now() - 1800000,
-        speaker: {
-          type: 'agent',
-          agentId: 'agent-a',
-          agentName: 'Agent A - Researcher',
-          initial: 'A',
-          color: '#569cd6',
-        },
-        content: 'Aku sudah cek beberapa referensi soal struktur data yang diusulkan. Menurutku skema `PlanDocument` sudah cukup untuk mencakup dependency antar-task.'
-      },
-      {
-        id: 'msg-2',
-        timestamp: Date.now() - 1200000,
-        speaker: {
-          type: 'agent',
-          agentId: 'agent-b',
-          agentName: 'Agent B - Reviewer',
-          initial: 'B',
-          color: '#4ec9b0',
-        },
-        content: 'Setuju, tapi perlu tambahan `successCriteria` di tiap task supaya Build Mode bisa deteksi deviasi otomatis.'
-      },
-      {
-        id: 'msg-3',
-        timestamp: Date.now() - 600000,
-        speaker: {
-          type: 'user',
-        },
-        content: 'Oke, tambahkan successCriteria. Lanjutkan diskusinya sampai siap di-generate jadi plan final.'
-      }
-    ]
+    messages: []
   }
 ];

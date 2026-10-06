@@ -15,6 +15,8 @@ import { globalOrchestrator } from './orchestrator/Orchestrator';
 import { CommandApprovalModal } from './components/CommandApprovalModal';
 import { SessionStore } from './storage/SessionStore';
 import { AgentStore } from './storage/AgentStore';
+import { HelpDocumentationModal, type HelpTabType } from './components/HelpDocumentationModal';
+import { ShortcutSetupModal } from './components/ShortcutSetupModal';
 import type { Agent, Session, SessionMessage, UserProfile, DiscussionModeType, CommandApprovalRequest, AttachedFile } from './types';
 import type { FileEntry } from './tauri/fsBridge';
 import { Box, FileText, CheckCircle2, Terminal as TerminalIcon, Copy, Check, Download, Paperclip } from 'lucide-react';
@@ -63,6 +65,20 @@ export function App() {
   const [commandApprovalRequest, setCommandApprovalRequest] = useState<CommandApprovalRequest | null>(null);
   const [approvalResolver, setApprovalResolver] = useState<((approved: boolean) => void) | null>(null);
 
+  // Zoom & Onboarding Modals
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [helpInitialTab, setHelpInitialTab] = useState<HelpTabType>('overview');
+  const [isShortcutModalOpen, setIsShortcutModalOpen] = useState(false);
+
+  // First-launch shortcut configuration check
+  useEffect(() => {
+    const prompted = localStorage.getItem('multi_agent_shortcut_setup_prompted');
+    if (!prompted) {
+      setIsShortcutModalOpen(true);
+    }
+  }, []);
+
   const handleResolveCommandApproval = (approved: boolean, alwaysAllow?: boolean) => {
     if (commandApprovalRequest && alwaysAllow) {
       setAvailableAgents((prev) =>
@@ -101,17 +117,121 @@ export function App() {
     });
   }, []);
 
-  // Keyboard shortcut Ctrl+` for Terminal
+  const handleZoomChange = (type: 'in' | 'out' | 'reset') => {
+    if (type === 'in') {
+      setZoomLevel((prev) => {
+        const next = Math.min(prev + 10, 200);
+        addToast('info', `Tingkat Zoom: ${next}%`);
+        return next;
+      });
+    } else if (type === 'out') {
+      setZoomLevel((prev) => {
+        const next = Math.max(prev - 10, 50);
+        addToast('info', `Tingkat Zoom: ${next}%`);
+        return next;
+      });
+    } else {
+      setZoomLevel(100);
+      addToast('info', 'Tingkat Zoom direset ke 100%');
+    }
+  };
+
+  const handleFileAction = (action: 'new-file' | 'new-text-file' | 'new-window' | 'open-file' | 'open-folder' | 'open-recent' | 'open-workspace' | 'save' | 'save-as') => {
+    switch (action) {
+      case 'new-file':
+        handleNewSession();
+        addToast('success', 'Sesi kerja baru berhasil dibuat');
+        break;
+      case 'new-text-file':
+        setSelectedFile({ name: 'untitled.txt', path: 'untitled.txt', is_dir: false, size: 0 });
+        setActiveTab('file');
+        addToast('info', 'Membuka editor berkas teks baru');
+        break;
+      case 'new-window':
+        addToast('info', 'Jendela Multi-Agent aktif');
+        break;
+      case 'open-file':
+      case 'open-folder':
+      case 'open-workspace':
+        setActiveTab('file');
+        addToast('info', 'Gunakan Explorer pada panel samping untuk menelusuri berkas');
+        break;
+      case 'open-recent':
+        setActiveTab('history');
+        addToast('info', 'Menampilkan riwayat sesi terkini');
+        break;
+      case 'save':
+        SessionStore.saveSessions(sessions);
+        addToast('success', 'Workspace dan sesi berhasil disimpan');
+        break;
+      case 'save-as':
+        if (currentSession.walkthrough) {
+          handleDownloadMarkdown(`walkthrough-${currentSession.id}.md`, currentSession.walkthrough);
+        } else {
+          SessionStore.saveSessions(sessions);
+          addToast('success', 'Sesi aktif berhasil disimpan');
+        }
+        break;
+    }
+  };
+
+  const handleEditAction = (action: 'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'find' | 'replace') => {
+    switch (action) {
+      case 'undo':
+        document.execCommand('undo');
+        break;
+      case 'redo':
+        document.execCommand('redo');
+        break;
+      case 'cut':
+        document.execCommand('cut');
+        break;
+      case 'copy':
+        document.execCommand('copy');
+        addToast('info', 'Teks disalin ke clipboard');
+        break;
+      case 'paste':
+        navigator.clipboard?.readText().then((text) => {
+          if (text) addToast('info', 'Teks ditempel dari clipboard');
+        }).catch(() => {});
+        break;
+      case 'find':
+        addToast('info', 'Gunakan bilah pencarian atau filter chat');
+        break;
+      case 'replace':
+        addToast('info', 'Gunakan editor berkas untuk fitur replace kode');
+        break;
+    }
+  };
+
+  // Keyboard shortcut listener (Ctrl+`, F1, Zoom, Save)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === '`') {
         e.preventDefault();
         setIsTerminalOpen((prev) => !prev);
+      } else if (e.key === 'F1') {
+        e.preventDefault();
+        setHelpInitialTab('overview');
+        setIsHelpOpen(true);
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        handleZoomChange('in');
+      } else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+        e.preventDefault();
+        handleZoomChange('out');
+      } else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+        e.preventDefault();
+        handleZoomChange('reset');
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        SessionStore.saveSessions(sessions);
+        addToast('success', 'Workspace berhasil disimpan');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [sessions]);
 
   // Sync sessions changes to SessionStore
   useEffect(() => {
@@ -323,11 +443,27 @@ export function App() {
   };
 
   return (
-    <div className="flex flex-col w-screen h-screen bg-[#1e1e1e] text-[#cccccc] overflow-hidden select-none font-sans">
+    <div
+      className="flex flex-col w-screen h-screen bg-[#1e1e1e] text-[#cccccc] overflow-hidden select-none font-sans"
+      style={{ zoom: `${zoomLevel}%` }}
+    >
       {/* Top Menu Bar */}
       <TopMenuBar
         onToggleTerminal={() => setIsTerminalOpen((prev) => !prev)}
         isTerminalOpen={isTerminalOpen}
+        onFileAction={handleFileAction}
+        onEditAction={handleEditAction}
+        onZoomChange={handleZoomChange}
+        zoomPercent={zoomLevel}
+        onOpenHelp={(tab) => {
+          setHelpInitialTab(tab || 'overview');
+          setIsHelpOpen(true);
+        }}
+        onOpenShortcutSetup={() => setIsShortcutModalOpen(true)}
+        onOpenAbout={() => {
+          setHelpInitialTab('overview');
+          setIsHelpOpen(true);
+        }}
       />
 
       {/* Main Workspace: Sidebar + Center Content Area */}
@@ -634,6 +770,18 @@ export function App() {
         onClose={() => setIsSettingsOpen(false)}
         userProfile={userProfile}
         onUpdateProfile={handleUpdateProfile}
+      />
+
+      <HelpDocumentationModal
+        isOpen={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
+        initialTab={helpInitialTab}
+      />
+
+      <ShortcutSetupModal
+        isOpen={isShortcutModalOpen}
+        onClose={() => setIsShortcutModalOpen(false)}
+        onSuccessToast={(msg) => addToast('success', msg)}
       />
 
       {/* Boundary State Toast System */}

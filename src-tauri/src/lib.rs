@@ -98,6 +98,93 @@ fn execute_command(command: String, cwd: Option<String>) -> Result<CommandResult
     }
 }
 
+#[tauri::command]
+fn create_system_shortcuts(desktop: bool, start_menu: bool) -> Result<String, String> {
+    #[cfg(target_os = "linux")]
+    {
+        let exec_path = std::env::var("APPIMAGE")
+            .unwrap_or_else(|_| {
+                std::env::current_exe()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_else(|_| "multi-agent-desktop".to_string())
+            });
+
+        let home = std::env::var("HOME").map_err(|e| format!("HOME environment variable not found: {}", e))?;
+        let desktop_entry = format!(
+            "[Desktop Entry]\nType=Application\nName=Multi-Agent Desktop\nGenericName=AI Agent Workspace\nComment=Modern AI Multi-Agent Workspace\nExec=\"{}\" %U\nIcon=utilities-terminal\nTerminal=false\nCategories=Development;IDE;\nStartupWMClass=multi-agent-app\n",
+            exec_path
+        );
+
+        let mut created = Vec::new();
+
+        if desktop {
+            let desktop_dir = Path::new(&home).join("Desktop");
+            if desktop_dir.exists() {
+                let shortcut_path = desktop_dir.join("multi-agent-desktop.desktop");
+                fs::write(&shortcut_path, &desktop_entry).map_err(|e| e.to_string())?;
+                let _ = Command::new("chmod").args(["+x", &shortcut_path.to_string_lossy().to_string()]).output();
+                created.push("Desktop");
+            }
+        }
+
+        if start_menu {
+            let apps_dir = Path::new(&home).join(".local/share/applications");
+            let _ = fs::create_dir_all(&apps_dir);
+            let shortcut_path = apps_dir.join("multi-agent-desktop.desktop");
+            fs::write(&shortcut_path, &desktop_entry).map_err(|e| e.to_string())?;
+            let _ = Command::new("chmod").args(["+x", &shortcut_path.to_string_lossy().to_string()]).output();
+            let _ = Command::new("update-desktop-database").arg(&apps_dir.to_string_lossy().to_string()).output();
+            created.push("Menu Aplikasi (Start Menu)");
+        }
+
+        Ok(format!("Shortcut berhasil dibuat: {}", created.join(", ")))
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let exe_path = std::env::current_exe()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default();
+
+        let mut ps_script = String::from("$WshShell = New-Object -comObject WScript.Shell;\n");
+        let mut created = Vec::new();
+
+        if desktop {
+            ps_script.push_str(&format!(
+                "$s1 = $WshShell.CreateShortcut(\"$([Environment]::GetFolderPath('Desktop'))\\Multi-Agent Desktop.lnk\");\n$s1.TargetPath = \"{}\";\n$s1.Save();\n",
+                exe_path.replace('"', "\\\"")
+            ));
+            created.push("Desktop");
+        }
+
+        if start_menu {
+            ps_script.push_str(&format!(
+                "$s2 = $WshShell.CreateShortcut(\"$([Environment]::GetFolderPath('Programs'))\\Multi-Agent Desktop.lnk\");\n$s2.TargetPath = \"{}\";\n$s2.Save();\n",
+                exe_path.replace('"', "\\\"")
+            ));
+            created.push("Start Menu");
+        }
+
+        let output = Command::new("powershell")
+            .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &ps_script])
+            .output()
+            .map_err(|e| format!("Gagal menjalankan PowerShell: {}", e))?;
+
+        if output.status.success() {
+            Ok(format!("Shortcut Windows berhasil dibuat: {}", created.join(", ")))
+        } else {
+            Err(String::from_utf8_lossy(&output.stderr).to_string())
+        }
+    }
+
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+    {
+        let _ = desktop;
+        let _ = start_menu;
+        Ok("Sistem operasi tidak memerlukan pembuatan shortcut khusus.".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -115,7 +202,8 @@ pub fn run() {
             list_directory,
             read_file_content,
             save_file_content,
-            execute_command
+            execute_command,
+            create_system_shortcuts
         ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");
