@@ -104,6 +104,24 @@ export interface SessionMessage {
   obsidianAction?: { action: 'search' | 'read' | 'write'; target: string; resultSummary: string };
 }
 
+export type TaskStatus = 'pending' | 'running' | 'completed' | 'deviated' | 'blocked';
+
+export interface WrittenFile {
+  path: string;
+  content: string;
+  language?: string;
+}
+
+export interface TaskRuntimeState {
+  task: PlannedTask;
+  status: TaskStatus;
+  output?: string;
+  logs: string[];
+  filesWritten?: WrittenFile[];
+  deviationReason?: string;
+  proposedAlternative?: string;
+}
+
 export interface Session {
   id: string;
   title: string;
@@ -115,6 +133,7 @@ export interface Session {
   messages: SessionMessage[];
   attachedFiles: AttachedFile[];
   walkthrough?: string;
+  buildStates?: TaskRuntimeState[];
 }
 
 export interface UserProfile {

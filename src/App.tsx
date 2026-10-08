@@ -17,7 +17,7 @@ import { SessionStore } from './storage/SessionStore';
 import { AgentStore } from './storage/AgentStore';
 import { HelpDocumentationModal, type HelpTabType } from './components/HelpDocumentationModal';
 import { ShortcutSetupModal } from './components/ShortcutSetupModal';
-import type { Agent, Session, SessionMessage, UserProfile, DiscussionModeType, CommandApprovalRequest, AttachedFile } from './types';
+import type { Agent, Session, SessionMessage, UserProfile, DiscussionModeType, CommandApprovalRequest, AttachedFile, TaskRuntimeState } from './types';
 import { selectFolderDialog, selectFileDialog, selectSaveFileDialog, readFileContent, saveFileContent, listDirectory, detectObsidianVaults, type FileEntry } from './tauri/fsBridge';
 import { ProviderStore } from './storage/ProviderStore';
 import { ObsidianStore } from './storage/ObsidianStore';
@@ -637,6 +637,20 @@ export function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
+  const handleUpdateBuildStates = (states: TaskRuntimeState[]) => {
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === currentSessionId
+          ? {
+              ...s,
+              buildStates: states,
+              lastActiveAt: Date.now(),
+            }
+          : s
+      )
+    );
+  };
+
   const handleSaveWalkthrough = (summary: string) => {
     setSessions((prev) =>
       prev.map((s) =>
@@ -978,6 +992,8 @@ export function App() {
                 planDocument={currentSession.planDocument}
                 availableAgents={availableAgents}
                 workspacePath={workspacePath}
+                initialTaskStates={currentSession.buildStates}
+                onUpdateTaskStates={handleUpdateBuildStates}
                 onSwitchToPlan={() => handleToggleMode('plan')}
                 onSaveWalkthrough={handleSaveWalkthrough}
                 onOpenFileInEditor={(filePath) => {

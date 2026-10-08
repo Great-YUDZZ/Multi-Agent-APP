@@ -1,25 +1,15 @@
-import type { PlannedTask, PlanDocument, Agent } from '../types';
+import type {
+  PlanDocument,
+  Agent,
+  TaskStatus,
+  WrittenFile,
+  TaskRuntimeState,
+} from '../types';
 import { globalProviderRegistry } from '../llm/ProviderRegistry';
 import { ObsidianTool } from '../tools/ObsidianTool';
 import { saveFileContent } from '../tauri/fsBridge';
 
-export type TaskStatus = 'pending' | 'running' | 'completed' | 'deviated' | 'blocked';
-
-export interface WrittenFile {
-  path: string;
-  content: string;
-  language?: string;
-}
-
-export interface TaskRuntimeState {
-  task: PlannedTask;
-  status: TaskStatus;
-  output?: string;
-  logs: string[];
-  filesWritten?: WrittenFile[];
-  deviationReason?: string;
-  proposedAlternative?: string;
-}
+export type { TaskStatus, WrittenFile, TaskRuntimeState };
 
 export interface BuildRunProgress {
   completed: number;
@@ -42,20 +32,43 @@ export class BuildModeController {
   private isRunning = false;
   private workspacePath?: string;
 
-  constructor(plan: PlanDocument, availableAgents: Agent[], workspacePath?: string) {
+  constructor(
+    plan: PlanDocument,
+    availableAgents: Agent[],
+    workspacePath?: string,
+    initialStates?: TaskRuntimeState[]
+  ) {
     this.plan = plan;
     this.workspacePath = workspacePath;
     availableAgents.forEach((a) => this.agents.set(a.id, a));
 
-    // Initialize state
-    plan.tasks.forEach((task) => {
-      this.taskStates.set(task.id, {
-        task,
-        status: 'pending',
-        logs: [],
-        filesWritten: [],
+    // Jika ada state yang tersimpan sebelumnya, pulihkan
+    if (initialStates && initialStates.length > 0) {
+      initialStates.forEach((st) => {
+        this.taskStates.set(st.task.id, { ...st });
       });
-    });
+      // Pastikan task di plan yang belum terdaftar diinisialisasi
+      plan.tasks.forEach((task) => {
+        if (!this.taskStates.has(task.id)) {
+          this.taskStates.set(task.id, {
+            task,
+            status: 'pending',
+            logs: [],
+            filesWritten: [],
+          });
+        }
+      });
+    } else {
+      // Initialize state fresh
+      plan.tasks.forEach((task) => {
+        this.taskStates.set(task.id, {
+          task,
+          status: 'pending',
+          logs: [],
+          filesWritten: [],
+        });
+      });
+    }
   }
 
   getStates(): TaskRuntimeState[] {

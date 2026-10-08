@@ -20,6 +20,8 @@ interface BuildTaskGraphViewProps {
   planDocument?: PlanDocument;
   availableAgents: Agent[];
   workspacePath?: string;
+  initialTaskStates?: TaskRuntimeState[];
+  onUpdateTaskStates?: (states: TaskRuntimeState[]) => void;
   onSwitchToPlan: () => void;
   onSaveWalkthrough?: (summary: string) => void;
   onOpenFileInEditor?: (filePath: string) => void;
@@ -29,19 +31,22 @@ export const BuildTaskGraphView: React.FC<BuildTaskGraphViewProps> = ({
   planDocument,
   availableAgents,
   workspacePath,
+  initialTaskStates,
+  onUpdateTaskStates,
   onSwitchToPlan,
   onSaveWalkthrough,
   onOpenFileInEditor,
 }) => {
   const [controller] = useState<BuildModeController | null>(() => {
     if (!planDocument) return null;
-    return new BuildModeController(planDocument, availableAgents, workspacePath);
+    return new BuildModeController(planDocument, availableAgents, workspacePath, initialTaskStates);
   });
 
   const [activeFileTabs, setActiveFileTabs] = useState<Record<string, number>>({});
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const [taskStates, setTaskStates] = useState<TaskRuntimeState[]>(() => {
+    if (initialTaskStates && initialTaskStates.length > 0) return initialTaskStates;
     return controller ? controller.getStates() : [];
   });
 
@@ -51,6 +56,16 @@ export const BuildTaskGraphView: React.FC<BuildTaskGraphViewProps> = ({
 
   const [walkthroughSummary, setWalkthroughSummary] = useState<string | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
+
+  // Sinkronkan state jika initialTaskStates berubah
+  React.useEffect(() => {
+    if (initialTaskStates && initialTaskStates.length > 0) {
+      setTaskStates(initialTaskStates);
+      if (controller) {
+        setProgress(controller.getProgress());
+      }
+    }
+  }, [initialTaskStates, controller]);
 
   if (!planDocument) {
     return (
@@ -78,9 +93,11 @@ export const BuildTaskGraphView: React.FC<BuildTaskGraphViewProps> = ({
 
     await controller.startBuild({
       onTaskStateChange: (_taskId, updatedState) => {
-        setTaskStates((prev) =>
-          prev.map((s) => (s.task.id === updatedState.task.id ? { ...updatedState } : s))
-        );
+        setTaskStates((prev) => {
+          const next = prev.map((s) => (s.task.id === updatedState.task.id ? { ...updatedState } : s));
+          onUpdateTaskStates?.(next);
+          return next;
+        });
       },
       onProgress: (p) => setProgress(p),
       onBuildComplete: (summary) => {
@@ -95,9 +112,11 @@ export const BuildTaskGraphView: React.FC<BuildTaskGraphViewProps> = ({
     if (!controller) return;
     await controller.approveDeviation(taskId, {
       onTaskStateChange: (_tId, updated) => {
-        setTaskStates((prev) =>
-          prev.map((s) => (s.task.id === updated.task.id ? { ...updated } : s))
-        );
+        setTaskStates((prev) => {
+          const next = prev.map((s) => (s.task.id === updated.task.id ? { ...updated } : s));
+          onUpdateTaskStates?.(next);
+          return next;
+        });
       },
       onProgress: (p) => setProgress(p),
       onBuildComplete: (summary) => {
@@ -151,23 +170,68 @@ export const BuildTaskGraphView: React.FC<BuildTaskGraphViewProps> = ({
           </div>
 
           {/* Trigger Button */}
-          <button
-            onClick={handleStartBuild}
-            disabled={isBuilding || progress.completed === progress.total}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#007acc] disabled:bg-[#333333] disabled:text-[#666666] text-white text-xs font-semibold rounded shadow transition-colors"
-          >
-            {isBuilding ? (
-              <>
-                <Loader2 size={13} className="animate-spin" />
-                <span>Mengeksekusi...</span>
-              </>
-            ) : (
-              <>
-                <Play size={13} />
-                <span>{progress.completed === progress.total ? 'Selesai' : 'Mulai Eksekusi'}</span>
-              </>
-            )}
-          </button>
+          {progress.completed === progress.total && progress.total > 0 ? (
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e3a2f] text-[#4ec9b0] text-xs font-semibold rounded border border-[#2e5944] shadow">
+                <CheckCircle2 size={13} />
+                <span>Selesai 100%</span>
+              </span>
+              <button
+                onClick={async () => {
+                  if (isBuilding || !controller) return;
+                  const resetStates: TaskRuntimeState[] = taskStates.map((s) => ({
+                    ...s,
+                    status: 'pending',
+                    logs: [],
+                  }));
+                  setTaskStates(resetStates);
+                  onUpdateTaskStates?.(resetStates);
+                  // Buat controller fresh dan jalankan ulang
+                  const freshCtrl = new BuildModeController(planDocument, availableAgents, workspacePath);
+                  setIsBuilding(true);
+                  await freshCtrl.startBuild({
+                    onTaskStateChange: (_taskId, updatedState) => {
+                      setTaskStates((prev) => {
+                        const next = prev.map((s) => (s.task.id === updatedState.task.id ? { ...updatedState } : s));
+                        onUpdateTaskStates?.(next);
+                        return next;
+                      });
+                    },
+                    onProgress: (p) => setProgress(p),
+                    onBuildComplete: (summary) => {
+                      setIsBuilding(false);
+                      setWalkthroughSummary(summary);
+                      if (onSaveWalkthrough) onSaveWalkthrough(summary);
+                    },
+                  });
+                }}
+                disabled={isBuilding}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2d2d2d] hover:bg-[#383838] active:bg-[#404040] text-[#cccccc] hover:text-white text-xs font-medium rounded border border-[#3c3c3c] shadow transition-colors cursor-pointer"
+                title="Jalankan ulang seluruh task build"
+              >
+                <Play size={11} />
+                <span>Jalankan Ulang</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleStartBuild}
+              disabled={isBuilding}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#007acc] disabled:bg-[#333333] disabled:text-[#666666] text-white text-xs font-semibold rounded shadow transition-colors cursor-pointer"
+            >
+              {isBuilding ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Mengeksekusi...</span>
+                </>
+              ) : (
+                <>
+                  <Play size={13} />
+                  <span>Mulai Eksekusi</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
