@@ -29,12 +29,13 @@ async function runStage3Verification() {
     throw new Error('Truncation context tidak mereduksi pesan.');
   }
 
-  // 2. Pengujian Multi-Provider Fallback (LM Studio -> Mock Provider)
-  console.log('\n[2/4] Menguji Multi-Provider Fallback...');
+  // 2. Pengujian Multi-Provider Fallback (LM Studio -> Mock Provider dengan allowMock = true)
+  console.log('\n[2/4] Menguji Multi-Provider Fallback (Eksplisit Mock)...');
   const fallbackResult = await globalProviderRegistry.sendMessageWithFallback(
     'local-lm-studio',
-    ['local-lm-studio', 'mock-offline'],
-    [{ role: 'user', content: 'Halo, berikan status kesiapan sistem.' }]
+    ['mock-offline'],
+    [{ role: 'user', content: 'Halo, berikan status kesiapan sistem.' }],
+    true
   );
   console.log(`- Provider yang merespons: ${fallbackResult.usedProviderId}`);
   console.log(`- Konten respons: "${fallbackResult.response.content.slice(0, 70)}..."`);

@@ -43,58 +43,181 @@ fn get_current_working_dir() -> Result<String, String> {
 }
 
 #[tauri::command]
-fn select_folder_dialog() -> Result<Option<String>, String> {
-    #[cfg(target_os = "linux")]
-    {
-        // Try zenity first (common on Ubuntu, Debian, GNOME)
-        if let Ok(output) = Command::new("zenity")
-            .args(["--file-selection", "--directory", "--title=Pilih Folder Workspace"])
-            .output()
+async fn select_folder_dialog() -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        #[cfg(target_os = "linux")]
         {
-            if output.status.success() {
-                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if !path.is_empty() {
-                    return Ok(Some(path));
+            // Try zenity first (common on Ubuntu, Debian, GNOME)
+            if let Ok(output) = Command::new("zenity")
+                .args(["--file-selection", "--directory", "--title=Pilih Folder Workspace"])
+                .output()
+            {
+                if output.status.success() {
+                    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !path.is_empty() {
+                        return Ok(Some(path));
+                    }
+                }
+            }
+            // Try kdialog (KDE Plasma)
+            if let Ok(output) = Command::new("kdialog")
+                .args(["--getexistingdirectory", "."])
+                .output()
+            {
+                if output.status.success() {
+                    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !path.is_empty() {
+                        return Ok(Some(path));
+                    }
                 }
             }
         }
-        // Try kdialog (KDE Plasma)
-        if let Ok(output) = Command::new("kdialog")
-            .args(["--getexistingdirectory", "."])
-            .output()
-        {
-            if output.status.success() {
-                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if !path.is_empty() {
-                    return Ok(Some(path));
-                }
-            }
-        }
-    }
 
-    #[cfg(target_os = "windows")]
-    {
-        let script = r#"
-        Add-Type -AssemblyName System.Windows.Forms
-        $f = New-Object System.Windows.Forms.FolderBrowserDialog
-        if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-            Write-Output $f.SelectedPath
-        }
-        "#;
-        if let Ok(output) = Command::new("powershell")
-            .args(["-NoProfile", "-Command", script])
-            .output()
+        #[cfg(target_os = "windows")]
         {
-            if output.status.success() {
-                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if !path.is_empty() {
-                    return Ok(Some(path));
+            let script = r#"
+            Add-Type -AssemblyName System.Windows.Forms
+            $f = New-Object System.Windows.Forms.FolderBrowserDialog
+            if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+                Write-Output $f.SelectedPath
+            }
+            "#;
+            if let Ok(output) = Command::new("powershell")
+                .args(["-NoProfile", "-Command", script])
+                .output()
+            {
+                if output.status.success() {
+                    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !path.is_empty() {
+                        return Ok(Some(path));
+                    }
                 }
             }
         }
-    }
 
-    Ok(None)
+        Ok(None)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn select_file_dialog() -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        #[cfg(target_os = "linux")]
+        {
+            if let Ok(output) = Command::new("zenity")
+                .args(["--file-selection", "--title=Buka Berkas"])
+                .output()
+            {
+                if output.status.success() {
+                    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !path.is_empty() {
+                        return Ok(Some(path));
+                    }
+                }
+            }
+            if let Ok(output) = Command::new("kdialog")
+                .args(["--getopenfilename", "."])
+                .output()
+            {
+                if output.status.success() {
+                    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !path.is_empty() {
+                        return Ok(Some(path));
+                    }
+                }
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            let script = r#"
+            Add-Type -AssemblyName System.Windows.Forms
+            $f = New-Object System.Windows.Forms.OpenFileDialog
+            if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+                Write-Output $f.FileName
+            }
+            "#;
+            if let Ok(output) = Command::new("powershell")
+                .args(["-NoProfile", "-Command", script])
+                .output()
+            {
+                if output.status.success() {
+                    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !path.is_empty() {
+                        return Ok(Some(path));
+                    }
+                }
+            }
+        }
+
+        Ok(None)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn select_save_file_dialog(default_name: Option<String>) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let filename = default_name.unwrap_or_else(|| "untitled.txt".to_string());
+
+        #[cfg(target_os = "linux")]
+        {
+            let filename_arg = format!("--filename={}", filename);
+            if let Ok(output) = Command::new("zenity")
+                .args(["--file-selection", "--save", "--confirm-overwrite", &filename_arg, "--title=Simpan Berkas Sebagai"])
+                .output()
+            {
+                if output.status.success() {
+                    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !path.is_empty() {
+                        return Ok(Some(path));
+                    }
+                }
+            }
+            if let Ok(output) = Command::new("kdialog")
+                .args(["--getsavefilename", &filename])
+                .output()
+            {
+                if output.status.success() {
+                    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !path.is_empty() {
+                        return Ok(Some(path));
+                    }
+                }
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            let script = format!(r#"
+            Add-Type -AssemblyName System.Windows.Forms
+            $f = New-Object System.Windows.Forms.SaveFileDialog
+            $f.FileName = "{}"
+            if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+                Write-Output $f.FileName
+            }
+            "#, filename.replace('"', "\\\""));
+
+            if let Ok(output) = Command::new("powershell")
+                .args(["-NoProfile", "-Command", &script])
+                .output()
+            {
+                if output.status.success() {
+                    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !path.is_empty() {
+                        return Ok(Some(path));
+                    }
+                }
+            }
+        }
+
+        Ok(None)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -140,6 +263,54 @@ fn list_directory(dir_path: String) -> Result<Vec<FileEntry>, String> {
     Ok(result)
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DetectedVault {
+    pub path: String,
+    pub name: String,
+    pub is_open: bool,
+}
+
+#[tauri::command]
+fn detect_obsidian_vaults() -> Result<Vec<DetectedVault>, String> {
+    let mut detected = Vec::new();
+    let mut config_paths = Vec::new();
+
+    if let Ok(home) = std::env::var("HOME") {
+        config_paths.push(format!("{}/.config/obsidian/obsidian.json", home));
+        config_paths.push(format!("{}/.var/app/md.obsidian.Obsidian/config/obsidian/obsidian.json", home));
+        config_paths.push(format!("{}/snap/obsidian/current/.config/obsidian/obsidian.json", home));
+    }
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        config_paths.push(format!("{}\\obsidian\\obsidian.json", appdata));
+    }
+
+    for cfg_path in config_paths {
+        if let Ok(content) = fs::read_to_string(&cfg_path) {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(vaults_obj) = val.get("vaults").and_then(|v| v.as_object()) {
+                    for (_id, v_info) in vaults_obj {
+                        if let Some(path_str) = v_info.get("path").and_then(|p| p.as_str()) {
+                            let path = Path::new(path_str);
+                            let name = path.file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_else(|| "Obsidian Vault".to_string());
+                            let is_open = v_info.get("open").and_then(|o| o.as_bool()).unwrap_or(false);
+
+                            detected.push(DetectedVault {
+                                path: path_str.to_string(),
+                                name,
+                                is_open,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(detected)
+}
+
 #[tauri::command]
 fn read_file_content(file_path: String) -> Result<String, String> {
     fs::read_to_string(&file_path).map_err(|e| e.to_string())
@@ -147,7 +318,17 @@ fn read_file_content(file_path: String) -> Result<String, String> {
 
 #[tauri::command]
 fn save_file_content(file_path: String, content: String) -> Result<(), String> {
-    fs::write(&file_path, content).map_err(|e| e.to_string())
+    let p = Path::new(&file_path);
+    if let Some(parent) = p.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    fs::write(p, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn create_directory(dir_path: String) -> Result<(), String> {
+    let p = Path::new(&dir_path);
+    fs::create_dir_all(p).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -419,11 +600,15 @@ pub fn run() {
             list_directory,
             read_file_content,
             save_file_content,
+            create_directory,
             execute_command,
             cancel_command,
             create_system_shortcuts,
             select_folder_dialog,
-            get_current_working_dir
+            select_file_dialog,
+            select_save_file_dialog,
+            get_current_working_dir,
+            detect_obsidian_vaults
         ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");

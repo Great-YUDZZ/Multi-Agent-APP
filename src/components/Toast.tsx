@@ -68,7 +68,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.96 }}
       transition={{ duration: 0.2 }}
-      className={`pointer-events-auto flex items-start gap-3 p-3 rounded shadow-2xl border ${config.border} ${config.bg} text-[#cccccc] text-xs backdrop-blur-md`}
+      className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-2xl shadow-2xl border ${config.border} ${config.bg} text-[#cccccc] text-xs backdrop-blur-md`}
     >
       {config.icon}
       <div className="flex-1 min-w-0 pr-1">
@@ -81,7 +81,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
       </div>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="text-[#858585] hover:text-white p-0.5 rounded cursor-pointer transition-colors"
+        className="text-[#858585] hover:text-white p-1 rounded-xl cursor-pointer transition-colors hover:bg-white/10"
       >
         <X size={13} />
       </button>

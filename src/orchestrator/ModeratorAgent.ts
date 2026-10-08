@@ -115,8 +115,8 @@ ${discussionContext}`;
 
     try {
       const llmResult = await globalProviderRegistry.sendMessageWithFallback(
-        activeAgents[0]?.llmProviderId || 'local-lm-studio',
-        ['local-lm-studio', 'mock-offline'],
+        activeAgents[0]?.llmProviderId || 'prov-openai',
+        [],
         [
           {
             role: 'system',

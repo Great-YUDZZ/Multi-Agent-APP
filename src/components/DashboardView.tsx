@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import type { Session, Agent } from '../types';
 import { globalSkillRegistry } from '../skills/SkillRegistry';
 import { CubesLogo } from './CubesLogo';
+import { Tooltip } from './Tooltip';
 
 interface DashboardViewProps {
   sessions: Session[];
@@ -59,18 +60,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={onNewSession}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] text-white rounded text-xs font-medium transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] text-white rounded-xl text-xs font-medium transition-colors shadow-sm"
           >
             <Plus size={14} />
             <span>Sesi Baru</span>
           </button>
-          <button
-            onClick={onOpenSettings}
-            className="p-1.5 text-[#858585] hover:text-white hover:bg-[#333333] rounded transition-colors"
-            title="Buka Pengaturan"
-          >
-            <Settings size={15} />
-          </button>
+          <Tooltip content="Pengaturan" position="bottom">
+            <button
+              onClick={onOpenSettings}
+              className="p-2 text-[#858585] hover:text-white hover:bg-[#333333] rounded-xl transition-colors cursor-pointer"
+            >
+              <Settings size={15} />
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -78,7 +80,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="p-8 max-w-6xl w-full mx-auto space-y-6">
         {/* Quick Stats Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-[#252526] border border-[#2d2d2d] p-4 rounded-lg space-y-1">
+          <div className="bg-[#252526] border border-[#2d2d2d] p-4 rounded-2xl space-y-1 shadow-sm">
             <div className="text-[10px] uppercase font-bold text-[#858585] tracking-wider">
               Total Sesi Aktif
             </div>
@@ -91,7 +93,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          <div className="bg-[#252526] border border-[#2d2d2d] p-4 rounded-lg space-y-1">
+          <div className="bg-[#252526] border border-[#2d2d2d] p-4 rounded-2xl space-y-1 shadow-sm">
             <div className="text-[10px] uppercase font-bold text-[#858585] tracking-wider">
               Agents Terdaftar
             </div>
@@ -104,7 +106,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          <div className="bg-[#252526] border border-[#2d2d2d] p-4 rounded-lg space-y-1">
+          <div className="bg-[#252526] border border-[#2d2d2d] p-4 rounded-2xl space-y-1 shadow-sm">
             <div className="text-[10px] uppercase font-bold text-[#858585] tracking-wider">
               Skills Markdown
             </div>
@@ -117,7 +119,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          <div className="bg-[#252526] border border-[#2d2d2d] p-4 rounded-lg space-y-1">
+          <div className="bg-[#252526] border border-[#2d2d2d] p-4 rounded-2xl space-y-1 shadow-sm">
             <div className="text-[10px] uppercase font-bold text-[#858585] tracking-wider">
               Host Runtime
             </div>
@@ -143,12 +145,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {activeSessions.length === 0 ? (
-            <div className="bg-[#252526] border border-[#2d2d2d] rounded-lg p-8 text-center space-y-2 text-xs text-[#858585]">
+            <div className="bg-[#252526] border border-[#2d2d2d] rounded-2xl p-8 text-center space-y-3 text-xs text-[#858585]">
               <FolderOpen size={32} className="mx-auto text-[#444444]" />
               <p>Belum ada sesi yang aktif berjalan saat ini.</p>
               <button
                 onClick={onNewSession}
-                className="px-3 py-1 bg-[#0e639c] text-white rounded text-xs transition-colors hover:bg-[#1177bb]"
+                className="px-4 py-1.5 bg-[#0e639c] text-white rounded-xl text-xs font-medium transition-colors hover:bg-[#1177bb] shadow-sm"
               >
                 Mulai Sesi Baru
               </button>
@@ -166,9 +168,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     key={session.id}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`bg-[#252526] border rounded-lg p-4 space-y-3 transition-colors ${
+                    className={`bg-[#252526] border rounded-2xl p-4 space-y-3 transition-all ${
                       isCurrent
-                        ? 'border-[#007acc] shadow-lg'
+                        ? 'border-[#007acc] shadow-lg ring-1 ring-[#007acc]/30'
                         : 'border-[#2d2d2d] hover:border-[#3c3c3c]'
                     }`}
                   >
@@ -176,7 +178,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-semibold uppercase ${
+                            className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-semibold uppercase ${
                               session.mode === 'plan'
                                 ? 'bg-[#182d40] text-[#9cdcfe]'
                                 : 'bg-[#143831] text-[#4ec9b0]'
@@ -202,7 +204,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                       <button
                         onClick={() => onSelectSession(session.id)}
-                        className="flex items-center gap-1 px-2.5 py-1 bg-[#2d2d2d] hover:bg-[#0e639c] text-[#cccccc] hover:text-white rounded text-xs transition-colors shrink-0"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2d2d2d] hover:bg-[#0e639c] text-[#cccccc] hover:text-white rounded-xl text-xs font-medium transition-colors shrink-0 shadow-sm"
                       >
                         <span>Buka</span>
                         <ArrowRight size={12} />
@@ -215,20 +217,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <span className="text-[11px] text-[#858585]">Agents:</span>
                         <div className="flex items-center -space-x-1">
                           {participants.map((agent) => (
-                            <div
-                              key={agent.id}
-                              title={`${agent.name} (${agent.role})`}
-                              className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-white shadow-sm"
-                              style={{ backgroundColor: agent.color }}
-                            >
-                              {agent.initial}
-                            </div>
+                            <Tooltip key={agent.id} content={`${agent.name} (${agent.role})`} position="top">
+                              <div
+                                className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm ring-1 ring-[#252526]"
+                                style={{ backgroundColor: agent.color }}
+                              >
+                                {agent.initial}
+                              </div>
+                            </Tooltip>
                           ))}
                         </div>
                       </div>
 
                       {session.planDocument ? (
-                        <span className="text-[11px] font-mono text-[#4ec9b0] bg-[#1e3a2f] px-2 py-0.5 rounded">
+                        <span className="text-[11px] font-mono text-[#4ec9b0] bg-[#1e3a2f] px-2.5 py-0.5 rounded-full">
                           {session.planDocument.tasks.length} tasks direncanakan
                         </span>
                       ) : (
@@ -245,7 +247,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Quick Navigation & Agent Management Banner */}
-        <div className="bg-[#252526] border border-[#2d2d2d] rounded-lg p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="bg-[#252526] border border-[#2d2d2d] rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="space-y-1">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider">
               Agent Builder & Trust Level Presets
@@ -256,7 +258,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <button
             onClick={onOpenAgentModal}
-            className="px-4 py-2 bg-[#2d2d2d] hover:bg-[#383838] border border-[#3c3c3c] text-white rounded text-xs font-medium transition-colors shrink-0"
+            className="px-4 py-2 bg-[#2d2d2d] hover:bg-[#383838] border border-[#3c3c3c] text-white rounded-xl text-xs font-medium transition-colors shrink-0 shadow-sm"
           >
             Kelola Tim Agents
           </button>

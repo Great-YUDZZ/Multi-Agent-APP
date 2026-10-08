@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
   Plus,
@@ -7,6 +7,8 @@ import {
   Folder,
   FolderOpen,
   FolderX,
+  FolderPlus,
+  FilePlus,
   FileCode,
   FileText,
   File,
@@ -21,9 +23,13 @@ import {
   ChevronRight,
   RefreshCw,
   Terminal as TerminalIcon,
+  Check,
+  X,
+  PanelLeftClose,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { listDirectory, type FileEntry } from '../tauri/fsBridge';
+import { listDirectory, createDirectory, saveFileContent, type FileEntry } from '../tauri/fsBridge';
+import { Tooltip } from './Tooltip';
 
 interface SidebarProps {
   onNewSession: () => void;
@@ -37,6 +43,7 @@ interface SidebarProps {
   workspacePath?: string;
   onOpenFolder?: () => void;
   onCloseFolder?: () => void;
+  onToggleSidebar?: () => void;
 }
 
 // Helper to determine specific file icons matching VS Code themes
@@ -125,6 +132,13 @@ interface FileTreeItemProps {
   selectedFile?: FileEntry | null;
   onSelectFile?: (file: FileEntry) => void;
   activeTab: string;
+  creationState?: { type: 'file' | 'folder'; parentPath: string } | null;
+  creationName?: string;
+  onChangeCreationName?: (val: string) => void;
+  onConfirmCreate?: () => void;
+  onCancelCreate?: () => void;
+  onStartCreate?: (type: 'file' | 'folder', parentPath: string) => void;
+  creationInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 const FileTreeItem: React.FC<FileTreeItemProps> = ({
@@ -137,35 +151,111 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
   selectedFile,
   onSelectFile,
   activeTab,
+  creationState,
+  creationName = '',
+  onChangeCreationName,
+  onConfirmCreate,
+  onCancelCreate,
+  onStartCreate,
+  creationInputRef,
 }) => {
   const isExpanded = expandedDirs.has(entry.path);
   const isLoading = loadingDirs.has(entry.path);
   const children = dirChildren[entry.path] || [];
   const isSelected = selectedFile?.path === entry.path && activeTab === 'file';
+  const isCreatingInside = creationState && creationState.parentPath === entry.path;
 
   if (entry.is_dir) {
     return (
       <div>
         <div
           onClick={() => onToggleDir(entry.path)}
-          className="flex items-center gap-1.5 px-1.5 py-1 text-xs rounded hover:bg-[#2a2d2e] cursor-pointer transition-colors group select-none text-[#cccccc] hover:text-white"
-          title={entry.path}
+          className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-lg hover:bg-[#2a2d2e] cursor-pointer transition-colors group select-none text-[#cccccc] hover:text-white"
         >
           <span className="text-[#858585] group-hover:text-white shrink-0">
             {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </span>
           {getFolderIcon(entry.name, isExpanded)}
           <span className="truncate font-normal">{entry.name}</span>
+
           {isLoading && (
             <RefreshCw size={10} className="animate-spin text-[#858585] ml-auto shrink-0" />
+          )}
+
+          {/* Subfolder Quick Actions on Hover */}
+          {!isLoading && (
+            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 ml-auto shrink-0 transition-opacity">
+              <Tooltip content="Berkas Baru" position="top">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartCreate && onStartCreate('file', entry.path);
+                  }}
+                  className="p-0.5 hover:text-white text-[#858585] rounded-md hover:bg-[#383838] transition-colors"
+                >
+                  <FilePlus size={12} />
+                </button>
+              </Tooltip>
+              <Tooltip content="Folder Baru" position="top">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartCreate && onStartCreate('folder', entry.path);
+                  }}
+                  className="p-0.5 hover:text-white text-[#858585] rounded-md hover:bg-[#383838] transition-colors"
+                >
+                  <FolderPlus size={12} />
+                </button>
+              </Tooltip>
+            </div>
           )}
         </div>
 
         {isExpanded && (
           <div className="ml-2.5 pl-2 border-l border-[#333333] space-y-0.5 mt-0.5">
+            {/* Inline creation input inside this folder */}
+            {isCreatingInside && (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#1e1e1e] border border-[#007acc] rounded-lg text-xs my-0.5">
+                {creationState.type === 'file' ? (
+                  <FilePlus size={12} className="text-[#4ec9b0] shrink-0" />
+                ) : (
+                  <FolderPlus size={12} className="text-[#dcb67a] shrink-0" />
+                )}
+                <input
+                  ref={creationInputRef}
+                  type="text"
+                  value={creationName}
+                  onChange={(e) => onChangeCreationName && onChangeCreationName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') onConfirmCreate && onConfirmCreate();
+                    else if (e.key === 'Escape') onCancelCreate && onCancelCreate();
+                  }}
+                  placeholder={creationState.type === 'file' ? 'nama-berkas.ext' : 'nama-folder'}
+                  className="flex-1 bg-transparent text-white focus:outline-none text-xs"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={onConfirmCreate}
+                  className="p-0.5 hover:bg-[#333333] text-[#4ec9b0] rounded"
+                >
+                  <Check size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={onCancelCreate}
+                  className="p-0.5 hover:bg-[#333333] text-[#858585] hover:text-white rounded"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
+
             {isLoading && children.length === 0 ? (
               <div className="text-[10px] text-[#858585] py-0.5 px-1 italic">Memuat...</div>
-            ) : children.length === 0 ? (
+            ) : children.length === 0 && !isCreatingInside ? (
               <div className="text-[10px] text-[#777777] py-0.5 px-1 italic">Kosong</div>
             ) : (
               children.map((child) => (
@@ -180,6 +270,13 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
                   selectedFile={selectedFile}
                   onSelectFile={onSelectFile}
                   activeTab={activeTab}
+                  creationState={creationState}
+                  creationName={creationName}
+                  onChangeCreationName={onChangeCreationName}
+                  onConfirmCreate={onConfirmCreate}
+                  onCancelCreate={onCancelCreate}
+                  onStartCreate={onStartCreate}
+                  creationInputRef={creationInputRef}
                 />
               ))
             )}
@@ -192,14 +289,13 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
   return (
     <div
       onClick={() => onSelectFile && onSelectFile(entry)}
-      className={`flex items-center gap-1.5 px-1.5 py-1 text-xs rounded cursor-pointer transition-colors select-none ${
+      className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-lg cursor-pointer transition-colors select-none ${
         isSelected
-          ? 'bg-[#094771] text-white font-medium'
+          ? 'bg-[#094771] text-white font-medium shadow-sm'
           : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
       }`}
-      title={entry.path}
     >
-      <span className="w-3 shrink-0" />
+      <span className="w-2.5 shrink-0" />
       {getFileIcon(entry.name)}
       <span className="truncate">{entry.name}</span>
     </div>
@@ -218,6 +314,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   workspacePath,
   onOpenFolder,
   onCloseFolder,
+  onToggleSidebar,
 }) => {
   const [isGearSpinning, setIsGearSpinning] = useState(false);
   const [isRootExpanded, setIsRootExpanded] = useState(true);
@@ -226,6 +323,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [dirChildren, setDirChildren] = useState<Record<string, FileEntry[]>>({});
   const [loadingDirs, setLoadingDirs] = useState<Set<string>>(new Set());
   const [isLoadingRoot, setIsLoadingRoot] = useState(false);
+
+  // Inline creation state
+  const [creationState, setCreationState] = useState<{ type: 'file' | 'folder'; parentPath: string } | null>(null);
+  const [creationName, setCreationName] = useState<string>('');
+  const creationInputRef = useRef<HTMLInputElement>(null);
 
   // Load root files when workspacePath changes
   const loadRootFiles = async (targetPath: string) => {
@@ -249,6 +351,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       setExpandedDirs(new Set());
       setDirChildren({});
     }
+  }, [workspacePath]);
+
+  // Listen for external "create workspace file" event from top menu File -> New File
+  useEffect(() => {
+    const handleCreateEvent = () => {
+      if (workspacePath) {
+        setCreationState({ type: 'file', parentPath: workspacePath });
+        setCreationName('');
+        setIsRootExpanded(true);
+        setTimeout(() => creationInputRef.current?.focus(), 60);
+      }
+    };
+    window.addEventListener('app:create-workspace-file', handleCreateEvent);
+    return () => {
+      window.removeEventListener('app:create-workspace-file', handleCreateEvent);
+    };
   }, [workspacePath]);
 
   // Toggle directory expansion and lazily fetch children if needed
@@ -295,6 +413,57 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
+  const handleConfirmCreate = async () => {
+    if (!creationState || !creationName.trim()) {
+      setCreationState(null);
+      setCreationName('');
+      return;
+    }
+
+    const name = creationName.trim();
+    const targetPath = `${creationState.parentPath}/${name}`;
+
+    try {
+      if (creationState.type === 'file') {
+        const ok = await saveFileContent(targetPath, '');
+        if (ok) {
+          await handleRefresh();
+          if (creationState.parentPath !== workspacePath) {
+            try {
+              const children = await listDirectory(creationState.parentPath);
+              setDirChildren((prev) => ({ ...prev, [creationState.parentPath]: children }));
+            } catch {}
+          }
+          if (onSelectFile) {
+            onSelectFile({ name, path: targetPath, is_dir: false, size: 0 });
+          }
+          setActiveTab('file');
+        }
+      } else {
+        const ok = await createDirectory(targetPath);
+        if (ok) {
+          await handleRefresh();
+          if (creationState.parentPath !== workspacePath) {
+            try {
+              const children = await listDirectory(creationState.parentPath);
+              setDirChildren((prev) => ({ ...prev, [creationState.parentPath]: children }));
+            } catch {}
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to create file/folder in workspace:', err);
+    } finally {
+      setCreationState(null);
+      setCreationName('');
+    }
+  };
+
+  const handleCancelCreate = () => {
+    setCreationState(null);
+    setCreationName('');
+  };
+
   const handleSettingsClick = () => {
     setIsGearSpinning(true);
     setTimeout(() => {
@@ -318,25 +487,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside className="w-60 h-full bg-[#252526] border-r border-[#2d2d2d] flex flex-col justify-between select-none font-sans text-xs">
       {/* Top Section */}
       <div className="p-2 space-y-3 flex-1 flex flex-col overflow-hidden">
-        {/* + New Session Button */}
-        <button
-          onClick={onNewSession}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#007acc] text-white rounded text-xs font-normal transition-colors shadow-sm shrink-0 cursor-pointer"
-        >
-          <Plus size={14} />
-          <span>New Session</span>
-        </button>
+        {/* + New Session Button & Collapse Sidebar Button */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={onNewSession}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-[#0e639c] hover:bg-[#1177bb] active:scale-[0.98] text-white rounded-xl text-xs font-medium transition-all shadow-sm cursor-pointer"
+          >
+            <Plus size={14} />
+            <span>New Session</span>
+          </button>
+          {onToggleSidebar && (
+            <Tooltip content="Tutup Sidebar (Ctrl+B)" position="bottom">
+              <button
+                onClick={onToggleSidebar}
+                className="p-2 text-[#858585] hover:text-white hover:bg-[#2a2d2e] rounded-xl transition-colors cursor-pointer shrink-0"
+              >
+                <PanelLeftClose size={15} />
+              </button>
+            </Tooltip>
+          )}
+        </div>
 
         {/* View Selection: Navigation Items */}
-        <div className="space-y-0.5 shrink-0">
+        <div className="space-y-1 shrink-0">
           <div className="text-[11px] font-bold text-[#bbbbbb] tracking-wider uppercase px-2 py-1">
             VIEWS
           </div>
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors cursor-pointer ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer ${
               activeTab === 'dashboard'
-                ? 'bg-[#37373d] text-white font-medium'
+                ? 'bg-[#37373d] text-white font-medium shadow-sm'
                 : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
             }`}
           >
@@ -346,9 +527,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={() => setActiveTab('chat')}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors cursor-pointer ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer ${
               activeTab === 'chat'
-                ? 'bg-[#37373d] text-white font-medium'
+                ? 'bg-[#37373d] text-white font-medium shadow-sm'
                 : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
             }`}
           >
@@ -360,9 +541,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={() => setActiveTab('history')}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors cursor-pointer ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer ${
               activeTab === 'history'
-                ? 'bg-[#37373d] text-white font-medium'
+                ? 'bg-[#37373d] text-white font-medium shadow-sm'
                 : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
             }`}
           >
@@ -372,9 +553,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={() => setActiveTab('artifact')}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors cursor-pointer ${
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer ${
               activeTab === 'artifact'
-                ? 'bg-[#37373d] text-white font-medium'
+                ? 'bg-[#37373d] text-white font-medium shadow-sm'
                 : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
             }`}
           >
@@ -386,9 +567,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {onToggleTerminal && (
             <button
               onClick={onToggleTerminal}
-              className={`w-full flex items-center justify-between px-2 py-1.5 rounded transition-colors cursor-pointer ${
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer ${
                 isTerminalOpen
-                  ? 'bg-[#37373d] text-white font-medium'
+                  ? 'bg-[#37373d] text-white font-medium shadow-sm'
                   : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
               }`}
             >
@@ -399,54 +580,72 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-[10px] font-mono text-[#858585]">Ctrl+`</span>
             </button>
           )}
-
-          {/* Active File Tab in Views if open */}
-          {selectedFile && (
-            <button
-              onClick={() => setActiveTab('file')}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors cursor-pointer ${
-                activeTab === 'file'
-                  ? 'bg-[#37373d] text-white font-medium'
-                  : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
-              }`}
-            >
-              {getFileIcon(selectedFile.name)}
-              <span className="truncate">{selectedFile.name}</span>
-            </button>
-          )}
         </div>
 
-        {/* Projects Tree Section (VS Code Explorer Aesthetic) */}
+        {/* Projects Tree Section (VS Code Explorer Aesthetic with File/Folder Actions) */}
         <div className="pt-2 border-t border-[#2d2d2d] flex-1 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between text-[11px] text-[#bbbbbb] font-bold tracking-wider px-2 py-1 shrink-0 uppercase">
             <span className="truncate">EXPLORER</span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
+              {workspacePath && (
+                <>
+                  <Tooltip content="Berkas Baru" position="bottom">
+                    <button
+                      onClick={() => {
+                        setCreationState({ type: 'file', parentPath: workspacePath });
+                        setCreationName('');
+                        setIsRootExpanded(true);
+                        setTimeout(() => creationInputRef.current?.focus(), 60);
+                      }}
+                      className="hover:text-white text-[#858585] p-1.5 rounded-lg hover:bg-[#2a2d2e] transition-colors cursor-pointer"
+                    >
+                      <FilePlus size={13} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Folder Baru" position="bottom">
+                    <button
+                      onClick={() => {
+                        setCreationState({ type: 'folder', parentPath: workspacePath });
+                        setCreationName('');
+                        setIsRootExpanded(true);
+                        setTimeout(() => creationInputRef.current?.focus(), 60);
+                      }}
+                      className="hover:text-white text-[#858585] p-1.5 rounded-lg hover:bg-[#2a2d2e] transition-colors cursor-pointer"
+                    >
+                      <FolderPlus size={13} />
+                    </button>
+                  </Tooltip>
+                </>
+              )}
               {onOpenFolder && (
-                <button
-                  onClick={onOpenFolder}
-                  title="Buka Folder dari Perangkat..."
-                  className="hover:text-white text-[#858585] p-1 rounded hover:bg-[#2a2d2e] transition-colors cursor-pointer"
-                >
-                  <FolderOpen size={13} />
-                </button>
+                <Tooltip content="Buka Folder" position="bottom">
+                  <button
+                    onClick={onOpenFolder}
+                    className="hover:text-white text-[#858585] p-1.5 rounded-lg hover:bg-[#2a2d2e] transition-colors cursor-pointer"
+                  >
+                    <FolderOpen size={13} />
+                  </button>
+                </Tooltip>
               )}
               {workspacePath && (
-                <button
-                  onClick={handleRefresh}
-                  title="Muat Ulang Berkas"
-                  className="hover:text-white text-[#858585] p-1 rounded hover:bg-[#2a2d2e] transition-colors cursor-pointer"
-                >
-                  <RefreshCw size={12} className={isLoadingRoot ? 'animate-spin' : ''} />
-                </button>
+                <Tooltip content="Muat Ulang" position="bottom">
+                  <button
+                    onClick={handleRefresh}
+                    className="hover:text-white text-[#858585] p-1.5 rounded-lg hover:bg-[#2a2d2e] transition-colors cursor-pointer"
+                  >
+                    <RefreshCw size={12} className={isLoadingRoot ? 'animate-spin' : ''} />
+                  </button>
+                </Tooltip>
               )}
               {workspacePath && onCloseFolder && (
-                <button
-                  onClick={onCloseFolder}
-                  title="Tutup Folder Workspace"
-                  className="hover:text-[#f48771] text-[#858585] p-1 rounded hover:bg-[#2a2d2e] transition-colors cursor-pointer"
-                >
-                  <FolderX size={13} />
-                </button>
+                <Tooltip content="Tutup Folder" position="bottom">
+                  <button
+                    onClick={onCloseFolder}
+                    className="hover:text-[#f48771] text-[#858585] p-1.5 rounded-lg hover:bg-[#2a2d2e] transition-colors cursor-pointer"
+                  >
+                    <FolderX size={13} />
+                  </button>
+                </Tooltip>
               )}
             </div>
           </div>
@@ -459,24 +658,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   Belum Ada Folder Terbuka
                 </div>
                 <div className="text-[10px] text-[#858585] leading-relaxed">
-                  Buka folder perangkat untuk mulai menjelajahi dan mengedit berkas kode.
+                  Buka folder perangkat untuk mulai mengelola dan mengedit berkas kode.
                 </div>
                 {onOpenFolder && (
                   <button
                     onClick={onOpenFolder}
-                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#007acc] text-white rounded text-xs font-medium transition-colors shadow-sm cursor-pointer"
+                    className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#0e639c] hover:bg-[#1177bb] active:scale-[0.98] text-white rounded-xl text-xs font-medium transition-all shadow-sm cursor-pointer"
                   >
                     <FolderOpen size={13} />
                     <span>Buka Folder Perangkat</span>
                   </button>
                 )}
               </div>
-            ) : rootFiles.length === 0 && !isLoadingRoot ? (
+            ) : rootFiles.length === 0 && !isLoadingRoot && !creationState ? (
               <div className="py-8 px-3 text-center space-y-2">
                 <Folder size={24} className="mx-auto text-[#555555]" />
                 <div className="text-[11px] font-medium text-[#cccccc]">Folder Kosong</div>
                 <div className="text-[10px] text-[#858585]">
-                  Tidak ada berkas di dalam folder ini.
+                  Gunakan tombol + di atas untuk membuat berkas atau folder baru.
                 </div>
               </div>
             ) : (
@@ -484,8 +683,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {/* Root Workspace Folder Node */}
                 <button
                   onClick={() => setIsRootExpanded(!isRootExpanded)}
-                  className="w-full flex items-center justify-between px-1.5 py-1 text-xs font-semibold text-[#ffffff] hover:bg-[#2a2d2e] rounded cursor-pointer transition-colors group select-none text-left"
-                  title={workspacePath}
+                  className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-[#ffffff] hover:bg-[#2a2d2e] rounded-lg cursor-pointer transition-colors group select-none text-left"
                 >
                   <div className="flex items-center gap-1.5 truncate">
                     <span className="text-[#858585] group-hover:text-white shrink-0">
@@ -501,6 +699,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {/* Recursive Children Tree */}
                 {isRootExpanded && (
                   <div className="ml-1 pl-1.5 border-l border-[#333333] space-y-0.5 mt-0.5">
+                    {/* Inline creation at workspace root */}
+                    {creationState && creationState.parentPath === workspacePath && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[#1e1e1e] border border-[#007acc] rounded-lg text-xs my-0.5">
+                        {creationState.type === 'file' ? (
+                          <FilePlus size={12} className="text-[#4ec9b0] shrink-0" />
+                        ) : (
+                          <FolderPlus size={12} className="text-[#dcb67a] shrink-0" />
+                        )}
+                        <input
+                          ref={creationInputRef}
+                          type="text"
+                          value={creationName}
+                          onChange={(e) => setCreationName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleConfirmCreate();
+                            else if (e.key === 'Escape') handleCancelCreate();
+                          }}
+                          placeholder={creationState.type === 'file' ? 'nama-berkas.ext' : 'nama-folder'}
+                          className="flex-1 bg-transparent text-white focus:outline-none text-xs"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={handleConfirmCreate}
+                          className="p-0.5 hover:bg-[#333333] text-[#4ec9b0] rounded"
+                        >
+                          <Check size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelCreate}
+                          className="p-0.5 hover:bg-[#333333] text-[#858585] hover:text-white rounded"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    )}
+
                     {rootFiles.map((entry: FileEntry) => (
                       <FileTreeItem
                         key={entry.path}
@@ -513,6 +749,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         selectedFile={selectedFile}
                         onSelectFile={handleFileClick}
                         activeTab={activeTab}
+                        creationState={creationState}
+                        creationName={creationName}
+                        onChangeCreationName={setCreationName}
+                        onConfirmCreate={handleConfirmCreate}
+                        onCancelCreate={handleCancelCreate}
+                        onStartCreate={(type, parentPath) => {
+                          setCreationState({ type, parentPath });
+                          setCreationName('');
+                          setExpandedDirs((prev) => new Set(prev).add(parentPath));
+                          setTimeout(() => creationInputRef.current?.focus(), 60);
+                        }}
+                        creationInputRef={creationInputRef}
                       />
                     ))}
                   </div>
@@ -527,7 +775,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-2 border-t border-[#2d2d2d] shrink-0">
         <button
           onClick={handleSettingsClick}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#cccccc] hover:text-white hover:bg-[#2a2d2e] rounded transition-colors group cursor-pointer"
+          className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-[#cccccc] hover:text-white hover:bg-[#2a2d2e] rounded-xl transition-colors group cursor-pointer"
         >
           <motion.div
             animate={{ rotate: isGearSpinning ? 360 : 0 }}

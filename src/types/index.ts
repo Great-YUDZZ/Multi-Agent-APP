@@ -27,6 +27,8 @@ export interface ProviderConfig {
   apiKey?: string;
   baseUrl?: string;
   model: string;
+  models?: string[]; // Daftar model aktif yang terdaftar untuk provider ini
+  detectedModels?: string[]; // Cache riwayat model yang berhasil dideteksi
 }
 
 export interface AgentPermissions {
@@ -36,7 +38,10 @@ export interface AgentPermissions {
     alwaysAllow?: string[];
     alwaysAsk?: string[];
   };
+  obsidianAccess?: 'denied' | 'read-only' | 'read-write';
 }
+
+export * from './obsidian';
 
 export interface Skill {
   id: string;
@@ -96,6 +101,7 @@ export interface SessionMessage {
   content: string;
   relatedTaskId?: string;
   attachments?: AttachedFile[];
+  obsidianAction?: { action: 'search' | 'read' | 'write'; target: string; resultSummary: string };
 }
 
 export interface Session {

@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import type { KeyboardEvent, ChangeEvent } from 'react';
-import { Plus, Mic, ArrowRight, Paperclip, X, FileCode } from 'lucide-react';
-import type { Agent, DiscussionModeType, AttachedFile } from '../types';
+import { Plus, Mic, ArrowRight, Paperclip, X, FileCode, BookOpen } from 'lucide-react';
+import type { Agent, DiscussionModeType, AttachedFile, ObsidianNoteMeta } from '../types';
+import { ObsidianStore } from '../storage/ObsidianStore';
+import { Tooltip } from './Tooltip';
 
 interface PromptBarProps {
   onSendMessage: (text: string, mentionedAgentId?: string, attachments?: AttachedFile[]) => void;
@@ -29,6 +31,10 @@ export const PromptBar: React.FC<PromptBarProps> = ({
   const [mentionFilter, setMentionFilter] = useState('');
   const [attachments, setAttachments] = useState<AttachedFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [showObsidianMenu, setShowObsidianMenu] = useState(false);
+  const [obsidianFilter, setObsidianFilter] = useState('');
+  const [cachedNotes, setCachedNotes] = useState<ObsidianNoteMeta[]>([]);
 
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -78,9 +84,12 @@ export const PromptBar: React.FC<PromptBarProps> = ({
 
   const handleTextChange = (val: string) => {
     setText(val);
+
+    // Deteksi @ mention
     const atIndex = val.lastIndexOf('@');
     if (atIndex !== -1 && atIndex === val.length - 1) {
       setShowMentionMenu(true);
+      setShowObsidianMenu(false);
       setMentionFilter('');
     } else if (atIndex !== -1 && showMentionMenu) {
       const query = val.slice(atIndex + 1);
@@ -92,6 +101,19 @@ export const PromptBar: React.FC<PromptBarProps> = ({
     } else {
       setShowMentionMenu(false);
     }
+
+    // Deteksi [[ Obsidian wikilink
+    const wikiIndex = val.lastIndexOf('[[');
+    if (wikiIndex !== -1 && !val.slice(wikiIndex).includes(']]')) {
+      const config = ObsidianStore.loadConfig();
+      setCachedNotes(config.notesCache || []);
+      setShowObsidianMenu(true);
+      setShowMentionMenu(false);
+      const query = val.slice(wikiIndex + 2);
+      setObsidianFilter(query.toLowerCase());
+    } else {
+      setShowObsidianMenu(false);
+    }
   };
 
   const handleSelectMention = (agent: Agent) => {
@@ -101,11 +123,23 @@ export const PromptBar: React.FC<PromptBarProps> = ({
     setShowMentionMenu(false);
   };
 
+  const handleSelectObsidianNote = (note: ObsidianNoteMeta) => {
+    const wikiIndex = text.lastIndexOf('[[');
+    if (wikiIndex !== -1) {
+      const beforeWiki = text.slice(0, wikiIndex);
+      setText(`${beforeWiki}[[${note.title}]] `);
+    } else {
+      setText((prev) => `${prev} [[${note.title}]] `);
+    }
+    setShowObsidianMenu(false);
+  };
+
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Escape') {
       setShowMentionMenu(false);
+      setShowObsidianMenu(false);
     }
-    if (e.key === 'Enter' && !e.shiftKey && !showMentionMenu) {
+    if (e.key === 'Enter' && !e.shiftKey && !showMentionMenu && !showObsidianMenu) {
       e.preventDefault();
       handleSend();
     }
@@ -167,10 +201,10 @@ export const PromptBar: React.FC<PromptBarProps> = ({
                 <div
                   key={agent.id}
                   onClick={() => handleSelectMention(agent)}
-                  className="flex items-center gap-2 p-1.5 rounded hover:bg-[#2a2d2e] cursor-pointer transition-colors"
+                  className="flex items-center gap-2 p-2 rounded-xl hover:bg-[#2a2d2e] cursor-pointer transition-colors"
                 >
                   <div
-                    className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-white shadow-sm shrink-0"
+                    className="w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shadow-sm shrink-0"
                     style={{ backgroundColor: agent.color }}
                   >
                     {agent.initial}
@@ -189,8 +223,52 @@ export const PromptBar: React.FC<PromptBarProps> = ({
         </div>
       )}
 
+      {/* Obsidian Note Mention Popup Menu */}
+      {showObsidianMenu && (
+        <div className="absolute bottom-full mb-2 left-4 w-72 bg-[#252526] border border-[#3c3c3c] rounded-2xl shadow-2xl p-2 z-30 max-h-60 overflow-y-auto">
+          <div className="text-[10px] font-bold text-[#858585] uppercase px-2 py-1 tracking-wider flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <BookOpen className="w-3 h-3 text-[#9cdcfe]" /> Catatan Obsidian
+            </span>
+            <span className="text-[9px] text-[#666]">Pilih untuk [[mention]]</span>
+          </div>
+          <div className="space-y-0.5">
+            {cachedNotes.length === 0 ? (
+              <div className="p-2 text-xs text-[#858585] text-center">
+                Belum ada catatan terindeks. Hubungkan Vault di Pengaturan.
+              </div>
+            ) : (
+              cachedNotes
+                .filter(
+                  (n) =>
+                    n.title.toLowerCase().includes(obsidianFilter) ||
+                    n.relativePath.toLowerCase().includes(obsidianFilter)
+                )
+                .slice(0, 10)
+                .map((note) => (
+                  <div
+                    key={note.absolutePath}
+                    onClick={() => handleSelectObsidianNote(note)}
+                    className="flex items-center gap-2 p-2 rounded-xl hover:bg-[#2a2d2e] cursor-pointer transition-colors"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-[#4ec9b0] shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold text-[#cccccc] truncate">
+                        [[{note.title}]]
+                      </div>
+                      <div className="text-[10px] text-[#858585] truncate font-mono">
+                        {note.relativePath}
+                      </div>
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Outer Prompt Container (VS Code Chat/Input panel) */}
-      <div className="bg-[#252526] border border-[#333333] focus-within:border-[#007fd4] rounded p-2.5 shadow-lg transition-colors">
+      <div className="bg-[#252526] border border-[#333333] focus-within:border-[#007fd4] rounded-2xl p-3 shadow-lg transition-colors">
         {/* Hidden File Input for Attachments */}
         <input
           type="file"
@@ -261,24 +339,24 @@ export const PromptBar: React.FC<PromptBarProps> = ({
             {/* Active Agent Chips */}
             <div className="flex items-center -space-x-1 overflow-hidden">
               {activeAgents.map((agent) => (
-                <div
-                  key={agent.id}
-                  title={`${agent.name} (${agent.role})`}
-                  className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-white border border-[#252526] shadow cursor-pointer hover:scale-105 transition-transform"
-                  style={{ backgroundColor: agent.color }}
-                >
-                  {agent.initial}
-                </div>
+                <Tooltip key={agent.id} content={`${agent.name} (${agent.role})`} position="top">
+                  <div
+                    className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-white border border-[#252526] shadow cursor-pointer hover:scale-105 transition-transform"
+                    style={{ backgroundColor: agent.color }}
+                  >
+                    {agent.initial}
+                  </div>
+                </Tooltip>
               ))}
             </div>
 
-            {/* Mode Switch: Plan / Build (VS Code Segmented Control) */}
-            <div className="flex items-center bg-[#1e1e1e] border border-[#333333] p-0.5 rounded text-xs ml-2">
+            {/* Mode Switch: Plan / Build (Smooth Pill Segmented Control) */}
+            <div className="flex items-center bg-[#1e1e1e] border border-[#333333] p-0.5 rounded-full text-xs ml-2">
               <button
                 onClick={() => onToggleMode('plan')}
-                className={`px-2.5 py-0.5 rounded text-xs transition-all ${
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   currentMode === 'plan'
-                    ? 'bg-[#0e639c] text-white font-medium'
+                    ? 'bg-[#0e639c] text-white shadow-sm'
                     : 'text-[#858585] hover:text-[#cccccc]'
                 }`}
               >
@@ -286,9 +364,9 @@ export const PromptBar: React.FC<PromptBarProps> = ({
               </button>
               <button
                 onClick={() => onToggleMode('build')}
-                className={`px-2.5 py-0.5 rounded text-xs transition-all ${
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   currentMode === 'build'
-                    ? 'bg-[#0e639c] text-white font-medium'
+                    ? 'bg-[#0e639c] text-white shadow-sm'
                     : 'text-[#858585] hover:text-[#cccccc]'
                 }`}
               >
@@ -298,55 +376,73 @@ export const PromptBar: React.FC<PromptBarProps> = ({
 
             {/* Strategy Switch (Round-Robin vs Hierarchical) when in Plan mode */}
             {currentMode === 'plan' && onToggleDiscussionStrategy && (
-              <div className="flex items-center bg-[#1e1e1e] border border-[#333333] p-0.5 rounded text-xs ml-1">
-                <button
-                  onClick={() => onToggleDiscussionStrategy('round-robin')}
-                  className={`px-2 py-0.5 rounded text-[11px] transition-all ${
-                    discussionStrategy === 'round-robin'
-                      ? 'bg-[#1e3a2f] text-[#4ec9b0] font-semibold'
-                      : 'text-[#858585] hover:text-[#cccccc]'
-                  }`}
-                  title="Strategi Round-Robin: Semua agent bergiliran + Moderator"
-                >
-                  Round-Robin
-                </button>
-                <button
-                  onClick={() => onToggleDiscussionStrategy('hierarchical')}
-                  className={`px-2 py-0.5 rounded text-[11px] transition-all ${
-                    discussionStrategy === 'hierarchical'
-                      ? 'bg-[#2a4365] text-[#90cdf4] font-semibold'
-                      : 'text-[#858585] hover:text-[#cccccc]'
-                  }`}
-                  title="Strategi Hierarchical: Manager delegasi ke Worker lalu rangkum"
-                >
-                  Hierarchical
-                </button>
+              <div className="flex items-center bg-[#1e1e1e] border border-[#333333] p-0.5 rounded-full text-xs ml-1.5">
+                <Tooltip content="Strategi Round-Robin" position="top">
+                  <button
+                    onClick={() => onToggleDiscussionStrategy('round-robin')}
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] transition-all cursor-pointer ${
+                      discussionStrategy === 'round-robin'
+                        ? 'bg-[#1e3a2f] text-[#4ec9b0] font-semibold shadow-xs'
+                        : 'text-[#858585] hover:text-[#cccccc]'
+                    }`}
+                  >
+                    Round-Robin
+                  </button>
+                </Tooltip>
+                <Tooltip content="Strategi Hierarchical" position="top">
+                  <button
+                    onClick={() => onToggleDiscussionStrategy('hierarchical')}
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] transition-all cursor-pointer ${
+                      discussionStrategy === 'hierarchical'
+                        ? 'bg-[#2a4365] text-[#90cdf4] font-semibold shadow-xs'
+                        : 'text-[#858585] hover:text-[#cccccc]'
+                    }`}
+                  >
+                    Hierarchical
+                  </button>
+                </Tooltip>
               </div>
             )}
           </div>
 
           {/* Right Actions: Paperclip, Mic & Send Button */}
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              title="Attach Code or Image Files"
-              className="p-1.5 text-[#858585] hover:text-[#cccccc] hover:bg-[#2a2d2e] rounded transition-colors cursor-pointer"
-            >
-              <Paperclip size={14} />
-            </button>
+            <Tooltip content="Catatan Obsidian" position="top">
+              <button
+                type="button"
+                onClick={() => {
+                  const config = ObsidianStore.loadConfig();
+                  setCachedNotes(config.notesCache || []);
+                  setShowObsidianMenu((prev) => !prev);
+                }}
+                className="p-1.5 text-[#858585] hover:text-[#4ec9b0] hover:bg-[#2a2d2e] rounded-lg transition-colors cursor-pointer"
+              >
+                <BookOpen size={14} />
+              </button>
+            </Tooltip>
 
-            <button
-              title="Voice Input"
-              className="p-1.5 text-[#858585] hover:text-white hover:bg-[#2a2d2e] rounded transition-colors"
-            >
-              <Mic size={14} />
-            </button>
+            <Tooltip content="Lampirkan Berkas" position="top">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-1.5 text-[#858585] hover:text-[#cccccc] hover:bg-[#2a2d2e] rounded-lg transition-colors cursor-pointer"
+              >
+                <Paperclip size={14} />
+              </button>
+            </Tooltip>
+
+            <Tooltip content="Input Suara" position="top">
+              <button
+                className="p-1.5 text-[#858585] hover:text-white hover:bg-[#2a2d2e] rounded-lg transition-colors cursor-pointer"
+              >
+                <Mic size={14} />
+              </button>
+            </Tooltip>
 
             <button
               onClick={handleSend}
               disabled={(!text.trim() && attachments.length === 0) || disabled}
-              className="w-7 h-7 rounded bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#094771] disabled:bg-[#333333] disabled:text-[#666666] text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer"
+              className="w-8 h-8 rounded-full bg-[#0e639c] hover:bg-[#1177bb] active:scale-95 disabled:bg-[#333333] disabled:text-[#666666] text-white flex items-center justify-center transition-all shadow-md cursor-pointer shrink-0"
             >
               <ArrowRight size={14} />
             </button>

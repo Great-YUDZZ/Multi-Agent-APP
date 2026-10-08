@@ -53,7 +53,7 @@ export const HelpDocumentationModal: React.FC<HelpDocumentationModalProps> = ({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.96 }}
           transition={{ duration: 0.15 }}
-          className="bg-[#1e1e1e] border border-[#3c3c3c] rounded-lg shadow-2xl w-full max-w-4xl h-[600px] flex flex-col overflow-hidden text-[#cccccc]"
+          className="bg-[#1e1e1e] border border-[#3c3c3c] rounded-2xl shadow-2xl w-full max-w-4xl h-[600px] flex flex-col overflow-hidden text-[#cccccc]"
         >
           {/* Modal Header */}
           <div className="h-12 bg-[#252526] border-b border-[#2d2d2d] px-5 flex items-center justify-between shrink-0">
@@ -65,7 +65,7 @@ export const HelpDocumentationModal: React.FC<HelpDocumentationModalProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="text-[#858585] hover:text-white hover:bg-[#333333] p-1.5 rounded transition-colors"
+              className="text-[#858585] hover:text-white hover:bg-[#333333] p-1.5 rounded-xl transition-colors"
             >
               <X size={16} />
             </button>
@@ -82,9 +82,9 @@ export const HelpDocumentationModal: React.FC<HelpDocumentationModalProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-xs rounded transition-colors ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs rounded-xl transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-[#094771] text-white font-medium'
+                      ? 'bg-[#094771] text-white font-medium shadow-sm'
                       : 'text-[#cccccc] hover:bg-[#2a2d2e] hover:text-white'
                   }`}
                 >
@@ -255,6 +255,11 @@ export const HelpDocumentationModal: React.FC<HelpDocumentationModalProps> = ({
                           <td className="p-2.5 text-[#858585]">Global</td>
                         </tr>
                         <tr>
+                          <td className="p-2.5 font-mono text-[#9cdcfe]">Ctrl + B</td>
+                          <td className="p-2.5 text-white">Buka / Tutup Sidebar Kiri</td>
+                          <td className="p-2.5 text-[#858585]">Global</td>
+                        </tr>
+                        <tr>
                           <td className="p-2.5 font-mono text-[#9cdcfe]">Ctrl + N</td>
                           <td className="p-2.5 text-white">Mulai Sesi Baru</td>
                           <td className="p-2.5 text-[#858585]">Global</td>
@@ -297,7 +302,7 @@ export const HelpDocumentationModal: React.FC<HelpDocumentationModalProps> = ({
             <span>Multi-Agent Desktop v0.1.4 — Dokumentasi Lengkap</span>
             <button
               onClick={onClose}
-              className="px-3 py-1 bg-[#0e639c] hover:bg-[#1177bb] text-white rounded text-xs transition-colors"
+              className="px-3.5 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] text-white rounded-xl text-xs font-medium transition-colors shadow-sm"
             >
               Tutup
             </button>

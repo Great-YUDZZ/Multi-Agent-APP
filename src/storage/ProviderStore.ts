@@ -4,12 +4,31 @@ const PROVIDER_STORAGE_KEY = 'multi_agent_custom_providers_v1';
 
 export const defaultProviders: ProviderConfig[] = [
   {
-    id: 'prov-lm-studio',
-    category: 'local',
-    providerType: 'lm-studio',
-    label: 'LM Studio (Lokal)',
-    baseUrl: 'http://localhost:1234/v1',
-    model: 'local-model',
+    id: 'prov-openai',
+    category: 'endpoint',
+    providerType: 'openai-compatible',
+    label: 'OpenAI (GPT-4o)',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o',
+    apiKey: '',
+  },
+  {
+    id: 'prov-anthropic',
+    category: 'endpoint',
+    providerType: 'anthropic',
+    label: 'Anthropic (Claude 3.5 Sonnet)',
+    baseUrl: 'https://api.anthropic.com/v1',
+    model: 'claude-3-5-sonnet-20241022',
+    apiKey: '',
+  },
+  {
+    id: 'prov-deepseek',
+    category: 'endpoint',
+    providerType: 'openai-compatible',
+    label: 'DeepSeek API',
+    baseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-chat',
+    apiKey: '',
   },
   {
     id: 'prov-ollama',
@@ -18,14 +37,16 @@ export const defaultProviders: ProviderConfig[] = [
     label: 'Ollama (Lokal)',
     baseUrl: 'http://localhost:11434/v1',
     model: 'llama3.2',
+    apiKey: '',
   },
   {
-    id: 'prov-mock',
+    id: 'prov-lm-studio',
     category: 'local',
-    providerType: 'custom',
-    label: 'Simulasi Offline (Mock)',
-    baseUrl: '',
-    model: 'mock-agent-v1',
+    providerType: 'lm-studio',
+    label: 'LM Studio (Lokal)',
+    baseUrl: 'http://localhost:1234/v1',
+    model: 'local-model',
+    apiKey: '',
   },
 ];
 
@@ -38,17 +59,27 @@ export class ProviderStore {
       if (!parsed || parsed.length === 0) return defaultProviders;
       
       return parsed.map((p) => {
-        if (!p.category) {
-          const isLocal =
-            p.providerType === 'lm-studio' ||
-            p.baseUrl?.includes('localhost') ||
-            p.baseUrl?.includes('127.0.0.1');
-          return { ...p, category: isLocal ? 'local' : 'endpoint' };
-        }
-        return p;
+        const isLocal =
+          p.category === 'local' ||
+          p.providerType === 'lm-studio' ||
+          p.baseUrl?.includes('localhost') ||
+          p.baseUrl?.includes('127.0.0.1');
+        
+        const models = Array.isArray(p.models) && p.models.length > 0
+          ? Array.from(new Set(p.models))
+          : [p.model];
+
+        return {
+          ...p,
+          category: p.category || (isLocal ? 'local' : 'endpoint'),
+          models,
+        };
       });
     } catch {
-      return defaultProviders;
+      return defaultProviders.map((p) => ({
+        ...p,
+        models: p.models || [p.model],
+      }));
     }
   }
 

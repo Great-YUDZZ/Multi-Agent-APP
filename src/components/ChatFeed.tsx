@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, ArrowRight, ShieldCheck, FileCode, Bot } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ShieldCheck, FileCode, Bot, KeyRound, AlertCircle, BookOpen } from 'lucide-react';
 import type { SessionMessage, Agent, PlanDocument } from '../types';
 
 interface ChatFeedProps {
@@ -10,6 +10,7 @@ interface ChatFeedProps {
   userDisplayName: string;
   planDocument?: PlanDocument;
   onSwitchToBuild?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const ChatFeed: React.FC<ChatFeedProps> = ({
@@ -19,6 +20,7 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
   userDisplayName,
   planDocument,
   onSwitchToBuild,
+  onOpenSettings,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -108,8 +110,22 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
                       {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <div className="bg-[#252526] border border-[#333333] rounded-2xl p-3.5 text-xs text-[#cccccc] leading-relaxed shadow-sm font-sans">
-                    {renderMessageContent(msg.content)}
+                  <div className="bg-[#252526] border border-[#333333] rounded-2xl p-3.5 text-xs text-[#cccccc] leading-relaxed shadow-sm font-sans space-y-2">
+                    {msg.obsidianAction && (
+                      <div className="flex items-center gap-2 px-2.5 py-1 bg-[#1a2333] border border-[#2b3a55] rounded-lg text-[11px] text-[#9cdcfe]">
+                        <BookOpen className="w-3.5 h-3.5 text-[#4ec9b0] shrink-0" />
+                        <span>
+                          {msg.obsidianAction.action === 'read'
+                            ? 'Membaca Obsidian:'
+                            : msg.obsidianAction.action === 'write'
+                            ? 'Menulis Catatan Obsidian:'
+                            : 'Mencari di Obsidian:'}{' '}
+                          <code className="text-[#ce9178] font-mono">[[{msg.obsidianAction.target}]]</code>
+                          <span className="text-[#858585] ml-1.5 text-[10px]">({msg.obsidianAction.resultSummary})</span>
+                        </span>
+                      </div>
+                    )}
+                    <div>{renderMessageContent(msg.content)}</div>
                   </div>
                 </div>
               </motion.div>
@@ -164,6 +180,88 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
                   {msg.content && renderMessageContent(msg.content)}
                 </div>
               </motion.div>
+            );
+          }
+
+          if (msg.speaker.type === 'system') {
+            const isApiKeyMissing = msg.speaker.event === 'api-key-missing';
+            const isApiKeyError = msg.speaker.event === 'api-key-error';
+
+            if (isApiKeyMissing || isApiKeyError) {
+              return (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="w-full max-w-2xl mx-auto my-2"
+                >
+                  <div
+                    className={`rounded-xl border p-4 shadow-lg ${
+                      isApiKeyMissing
+                        ? 'bg-[#252526] border-[#cca700]/50 text-[#d4d4d4]'
+                        : 'bg-[#252526] border-[#f14c4c]/60 text-[#d4d4d4]'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                          isApiKeyMissing
+                            ? 'bg-[#cca700]/20 text-[#cca700]'
+                            : 'bg-[#f14c4c]/20 text-[#f14c4c]'
+                        }`}
+                      >
+                        {isApiKeyMissing ? <KeyRound size={16} /> : <AlertCircle size={16} />}
+                      </div>
+
+                      <div className="flex-1 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`text-xs font-bold uppercase tracking-wider ${
+                              isApiKeyMissing ? 'text-[#cca700]' : 'text-[#f14c4c]'
+                            }`}
+                          >
+                            {isApiKeyMissing ? 'Konfigurasi API Key Diperlukan' : 'Kesalahan Pada API Key'}
+                          </span>
+                          <span className="text-[10px] text-[#858585] font-mono">
+                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+
+                        <p className="text-xs leading-relaxed text-[#cccccc]">
+                          {msg.content}
+                        </p>
+
+                        {onOpenSettings && (
+                          <div className="pt-2">
+                            <button
+                              onClick={onOpenSettings}
+                              className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium text-white transition-all shadow-sm ${
+                                isApiKeyMissing
+                                  ? 'bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#007acc]'
+                                  : 'bg-[#a31515] hover:bg-[#c72e2e] active:bg-[#851010]'
+                              }`}
+                            >
+                              <KeyRound size={13} />
+                              <span>
+                                {isApiKeyMissing ? 'Buka Pengaturan API Key' : 'Periksa API Key di Pengaturan'}
+                              </span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            }
+
+            return (
+              <div key={msg.id} className="w-full text-center my-2">
+                <span className="px-3 py-1 rounded-full bg-[#252526] border border-[#333333] text-[11px] text-[#858585]">
+                  {msg.content}
+                </span>
+              </div>
             );
           }
 

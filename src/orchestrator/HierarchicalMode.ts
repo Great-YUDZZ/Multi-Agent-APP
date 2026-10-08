@@ -3,6 +3,7 @@ import { ModeratorAgent, type ModeratorEvaluation } from './ModeratorAgent';
 import { globalProviderRegistry } from '../llm/ProviderRegistry';
 import { globalSkillRegistry } from '../skills/SkillRegistry';
 import { WebTool } from '../tools/WebTool';
+import { ObsidianTool } from '../tools/ObsidianTool';
 import type { DiscussionStrategy, DiscussionCallbacks } from './DiscussionStrategy';
 
 /**
@@ -59,7 +60,7 @@ ${globalSkillRegistry.formatSkillsPrompt(manager.skillIds || [])}`,
     try {
       const managerResult = await globalProviderRegistry.sendMessageWithFallback(
         manager.llmProviderId,
-        ['local-lm-studio', 'mock-offline'],
+        [],
         [managerDirectivePrompt, { role: 'user', content: userPrompt }]
       );
       managerDirectiveContent = managerResult.response.content;
@@ -81,12 +82,18 @@ ${globalSkillRegistry.formatSkillsPrompt(manager.skillIds || [])}`,
       callbacks.onAgentMessage(managerMsg);
     } catch (err) {
       console.error(`Manager ${manager.name} gagal memberikan arahan:`, err);
+      throw err;
     }
 
     // Langkah 2: Setiap Worker Agent merespons instruksi manajer sesuai keahliannya
     for (const worker of workers) {
       callbacks.onAgentStartThinking(worker);
       callbacks.onStrategyStatus?.(`[Hierarchical] Worker ${worker.name} sedang mengerjakan delegasi...`);
+
+      const obsidianNotice =
+        worker.permissions.obsidianAccess !== 'denied'
+          ? `\n${ObsidianTool.TOOL_INSTRUCTIONS}`
+          : '';
 
       const workerPrompt = {
         role: 'system' as const,
@@ -98,15 +105,61 @@ ${managerDirectiveContent}
 """
 Berikan usulan solusi, rancangan kode/arsitektur, dan kriteria sukses sesuai bidangmu.
 ${globalSkillRegistry.formatSkillsPrompt(worker.skillIds || [])}
-${worker.permissions.internetAccess === 'allowed' ? WebTool.SYSTEM_SECURITY_NOTICE : ''}`,
+${worker.permissions.internetAccess === 'allowed' ? WebTool.SYSTEM_SECURITY_NOTICE : ''}${obsidianNotice}`,
       };
 
       try {
         const workerResult = await globalProviderRegistry.sendMessageWithFallback(
           worker.llmProviderId,
-          ['local-lm-studio', 'mock-offline'],
+          [],
           [workerPrompt, { role: 'user', content: `Laksanakan arahan teknis terkait: ${userPrompt}` }]
         );
+
+        let finalContent = workerResult.response.content;
+        let lastObsidianAction: SessionMessage['obsidianAction'] = undefined;
+
+        // Otonom: Parse dan eksekusi tool call Obsidian jika ada
+        const obsidianCalls = ObsidianTool.parseToolCalls(workerResult.response.content);
+        if (obsidianCalls.length > 0) {
+          for (const call of obsidianCalls) {
+            callbacks.onStrategyStatus?.(
+              `[Obsidian] ${worker.name} sedang ${
+                call.action === 'read'
+                  ? 'membaca'
+                  : call.action === 'write'
+                  ? 'menulis'
+                  : 'mencari'
+              } [[${call.title || call.query}]]...`
+            );
+
+            const toolRes = await ObsidianTool.execute(call, worker.permissions);
+            lastObsidianAction = {
+              action: call.action,
+              target: call.title || call.query || 'Note',
+              resultSummary: toolRes.message,
+            };
+
+            if (toolRes.success && (call.action === 'read' || call.action === 'search')) {
+              try {
+                const followUp = await globalProviderRegistry.sendMessageWithFallback(
+                  worker.llmProviderId,
+                  [],
+                  [
+                    workerPrompt,
+                    { role: 'assistant', content: workerResult.response.content },
+                    {
+                      role: 'user',
+                      content: `Hasil dari Obsidian:\n${toolRes.formattedOutput}\nLanjutkan rekomendasi teknis Anda mengacu pada data Obsidian di atas.`,
+                    },
+                  ]
+                );
+                finalContent = followUp.response.content;
+              } catch (followErr) {
+                console.warn('Sintesis tool Obsidian worker gagal:', followErr);
+              }
+            }
+          }
+        }
 
         const workerMsg: SessionMessage = {
           id: `msg-${worker.id}-${Date.now()}`,
@@ -118,13 +171,15 @@ ${worker.permissions.internetAccess === 'allowed' ? WebTool.SYSTEM_SECURITY_NOTI
             initial: worker.initial,
             color: worker.color,
           },
-          content: workerResult.response.content,
+          content: finalContent,
+          obsidianAction: lastObsidianAction,
         };
 
         currentRoundMessages.push(workerMsg);
         callbacks.onAgentMessage(workerMsg);
       } catch (err) {
         console.error(`Worker ${worker.name} gagal merespons:`, err);
+        throw err;
       }
     }
 
@@ -148,7 +203,7 @@ Buat ringkasan arsitektur final yang menyatukan seluruh usulan menjadi rencana e
       try {
         const synthesisResult = await globalProviderRegistry.sendMessageWithFallback(
           manager.llmProviderId,
-          ['local-lm-studio', 'mock-offline'],
+          [],
           [synthesisPrompt, { role: 'user', content: 'Sintesiskan konsensus tim final.' }]
         );
 
@@ -169,6 +224,7 @@ Buat ringkasan arsitektur final yang menyatukan seluruh usulan menjadi rencana e
         callbacks.onAgentMessage(synthesisMsg);
       } catch (err) {
         console.error('Sintesis manajer gagal:', err);
+        throw err;
       }
     }
 

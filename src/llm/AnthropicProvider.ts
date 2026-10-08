@@ -1,6 +1,7 @@
 import type { Message, LLMResponse, ProviderConfig } from '../types';
 import type { LLMProvider } from './LLMProvider';
 import { truncateContext, estimateTokenCount } from './contextUtils';
+import { ApiKeyMissingError, ApiKeyInvalidError } from './errors';
 
 export class AnthropicProvider implements LLMProvider {
   readonly id: string;
@@ -19,8 +20,8 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async sendMessage(messages: Message[]): Promise<LLMResponse> {
-    if (!this.apiKey) {
-      throw new Error('Anthropic API key belum dikonfigurasi di Settings -> Providers.');
+    if (!this.apiKey || !this.apiKey.trim()) {
+      throw new ApiKeyMissingError(this.id, this.name);
     }
 
     const truncated = truncateContext(messages, this.maxContextTokens);
@@ -37,7 +38,7 @@ export class AnthropicProvider implements LLMProvider {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
+          'x-api-key': this.apiKey.trim(),
           'anthropic-version': '2023-06-01',
           'dangerously-allow-browser': 'true',
         },
@@ -51,6 +52,18 @@ export class AnthropicProvider implements LLMProvider {
 
       if (!response.ok) {
         const errorText = await response.text();
+        const lowerError = errorText.toLowerCase();
+        if (
+          response.status === 401 ||
+          response.status === 403 ||
+          lowerError.includes('api_key') ||
+          lowerError.includes('api-key') ||
+          lowerError.includes('unauthorized') ||
+          lowerError.includes('authentication') ||
+          lowerError.includes('credit')
+        ) {
+          throw new ApiKeyInvalidError(this.id, `HTTP ${response.status}: ${errorText}`, this.name);
+        }
         throw new Error(`Anthropic error (${response.status}): ${errorText}`);
       }
 
@@ -62,7 +75,18 @@ export class AnthropicProvider implements LLMProvider {
 
       return { content, usage };
     } catch (err: unknown) {
+      if (err instanceof ApiKeyMissingError || err instanceof ApiKeyInvalidError) {
+        throw err;
+      }
       const msg = err instanceof Error ? err.message : String(err);
+      if (
+        msg.includes('401') ||
+        msg.includes('403') ||
+        msg.toLowerCase().includes('api key') ||
+        msg.toLowerCase().includes('unauthorized')
+      ) {
+        throw new ApiKeyInvalidError(this.id, msg, this.name);
+      }
       throw new Error(`Anthropic request gagal: ${msg}`);
     }
   }
@@ -73,11 +97,11 @@ export class AnthropicProvider implements LLMProvider {
     }
     const start = performance.now();
     try {
-      const res = await this.sendMessage([{ role: 'user', content: 'Ping' }]);
+      await this.sendMessage([{ role: 'user', content: 'Ping' }]);
       const latencyMs = Math.round(performance.now() - start);
       return {
         success: true,
-        message: `Anthropic valid (${res.content.slice(0, 15)}... ${latencyMs}ms)`,
+        message: `${this.name} terhubung (${latencyMs}ms)`,
         latencyMs,
       };
     } catch (err: unknown) {

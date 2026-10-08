@@ -1,5 +1,6 @@
 import type { PlannedTask, PlanDocument, Agent } from '../types';
 import { globalProviderRegistry } from '../llm/ProviderRegistry';
+import { ObsidianTool } from '../tools/ObsidianTool';
 
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'deviated' | 'blocked';
 
@@ -148,7 +149,7 @@ export class BuildModeController {
       const prompt = `Eksekusi task: ${state.task.description}.\nKriteria sukses: ${state.task.successCriteria}.\nBerikan laporan eksekusi teknis ringkas.`;
       const result = await globalProviderRegistry.sendMessageWithFallback(
         agent.llmProviderId,
-        ['local-lm-studio', 'mock-offline'],
+        [],
         [
           { role: 'system', content: `Kamu adalah ${agent.name}. Jalankan task teknis ini secara presisi.` },
           { role: 'user', content: prompt },
@@ -156,6 +157,14 @@ export class BuildModeController {
       );
 
       state.output = result.response.content;
+
+      // Otonom: Parse dan eksekusi tool Obsidian jika agen menulis/membaca catatan
+      const obsidianCalls = ObsidianTool.parseToolCalls(result.response.content);
+      for (const call of obsidianCalls) {
+        const toolRes = await ObsidianTool.execute(call, agent.permissions);
+        state.logs.push(`[Obsidian] ${call.action}: ${toolRes.message}`);
+      }
+
       state.status = 'completed';
       state.logs.push(`Laporan selesai: ${state.output.slice(0, 60)}...`);
       state.logs.push(`Kriteria [${state.task.successCriteria}] diverifikasi lolos.`);

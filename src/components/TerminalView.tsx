@@ -13,6 +13,7 @@ import {
   type CommandResult,
 } from '../tauri/terminalBridge';
 import { isTauriEnvironment, getCurrentWorkingDir } from '../tauri/fsBridge';
+import { Tooltip } from './Tooltip';
 
 interface TerminalEntry {
   id: string;
@@ -267,12 +268,12 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       }`}
     >
       {/* Top Header / Tab Bar */}
-      <div className="h-8 bg-[#181818] border-b border-[#262626] flex items-center justify-between px-3 select-none font-sans shrink-0">
+      <div className="h-9 bg-[#181818] border-b border-[#262626] flex items-center justify-between px-3 select-none font-sans shrink-0">
         {/* Tabs */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setActiveTab('terminal')}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-t font-medium transition-colors cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-t-xl font-medium transition-colors cursor-pointer ${
               activeTab === 'terminal'
                 ? 'bg-[#0c0c0c] text-white border-t-2 border-[#22c55e]'
                 : 'text-[#858585] hover:text-white'
@@ -281,7 +282,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
             <TerminalIcon size={12} className="text-[#22c55e]" />
             <span className="font-mono text-[11px] font-semibold tracking-wide">bash</span>
             <span
-              className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+              className={`text-[9px] px-1.5 py-0.5 rounded-full font-mono font-medium ${
                 isNative ? 'bg-[#143821] text-[#4ade80]' : 'bg-[#262626] text-[#a3a3a3]'
               }`}
             >
@@ -291,7 +292,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
           <button
             onClick={() => setActiveTab('output')}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-t transition-colors cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-t-xl transition-colors cursor-pointer ${
               activeTab === 'output'
                 ? 'bg-[#0c0c0c] text-white border-t-2 border-[#38bdf8]'
                 : 'text-[#858585] hover:text-white'
@@ -302,32 +303,35 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-1.5 text-[#858585]">
-          <button
-            onClick={() => setEntries([])}
-            title="Clear Terminal (clear)"
-            className="p-1 hover:text-white hover:bg-[#262626] rounded transition-colors cursor-pointer"
-          >
-            <Trash2 size={12} />
-          </button>
+        <div className="flex items-center gap-1 text-[#858585]">
+          <Tooltip content="Bersihkan Terminal" position="bottom">
+            <button
+              onClick={() => setEntries([])}
+              className="p-1.5 hover:text-white hover:bg-[#262626] rounded-lg transition-colors cursor-pointer"
+            >
+              <Trash2 size={13} />
+            </button>
+          </Tooltip>
 
           {onToggleMaximize && (
-            <button
-              onClick={onToggleMaximize}
-              title={isMaximized ? 'Restore Panel' : 'Maximize Panel'}
-              className="p-1 hover:text-white hover:bg-[#262626] rounded transition-colors cursor-pointer"
-            >
-              {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-            </button>
+            <Tooltip content={isMaximized ? 'Perkecil Panel' : 'Perbesar Panel'} position="bottom">
+              <button
+                onClick={onToggleMaximize}
+                className="p-1.5 hover:text-white hover:bg-[#262626] rounded-lg transition-colors cursor-pointer"
+              >
+                {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+              </button>
+            </Tooltip>
           )}
 
-          <button
-            onClick={onClose}
-            title="Close Terminal"
-            className="p-1 hover:text-white hover:bg-[#262626] rounded transition-colors cursor-pointer"
-          >
-            <X size={13} />
-          </button>
+          <Tooltip content="Tutup Terminal" position="bottom">
+            <button
+              onClick={onClose}
+              className="p-1.5 hover:text-white hover:bg-[#262626] rounded-lg transition-colors cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          </Tooltip>
         </div>
       </div>
 

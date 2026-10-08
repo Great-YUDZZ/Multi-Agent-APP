@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Trash2, ArrowRight, MessageSquare, Clock } from 'lucide-react';
 import type { Session, Agent } from '../types';
+import { Tooltip } from './Tooltip';
 
 interface HistoryViewProps {
   sessions: Session[];
@@ -35,21 +36,21 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         </div>
 
         <div className="relative w-64">
-          <Search size={13} className="absolute left-2.5 top-2 text-[#858585]" />
+          <Search size={13} className="absolute left-2.5 top-2.5 text-[#858585]" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari sesi..."
-            className="w-full bg-[#1e1e1e] border border-[#3c3c3c] focus:border-[#4ec9b0] rounded py-1 pl-8 pr-3 text-xs text-[#cccccc] placeholder-[#858585] outline-none"
+            className="w-full bg-[#1e1e1e] border border-[#3c3c3c] focus:border-[#4ec9b0] rounded-xl py-1.5 pl-8 pr-3 text-xs text-[#cccccc] placeholder-[#858585] outline-none"
           />
         </div>
       </div>
 
       {/* Sessions List */}
-      <div className="flex-1 overflow-y-auto p-6 max-w-4xl w-full mx-auto space-y-2.5">
+      <div className="flex-1 overflow-y-auto p-6 max-w-4xl w-full mx-auto space-y-3">
         {filtered.length === 0 ? (
-          <div className="text-center py-16 text-[#858585] text-xs bg-[#252526] border border-[#333333] rounded space-y-2">
+          <div className="text-center py-16 text-[#858585] text-xs bg-[#252526] border border-[#333333] rounded-2xl space-y-2">
             <MessageSquare size={32} className="mx-auto text-[#3c3c3c]" />
             <div className="text-[#cccccc] font-medium">Tidak ada sesi ditemukan</div>
             <div className="text-[11px] text-[#777777]">Coba kata kunci pencarian lain atau mulai sesi baru.</div>
@@ -64,8 +65,8 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
             return (
               <div
                 key={session.id}
-                className={`bg-[#252526] border rounded p-3.5 flex items-center justify-between transition-colors ${
-                  isCurrent ? 'border-[#4ec9b0]/80 shadow' : 'border-[#333333] hover:bg-[#2a2d2e]'
+                className={`bg-[#252526] border rounded-2xl p-4 flex items-center justify-between transition-all ${
+                  isCurrent ? 'border-[#4ec9b0]/80 shadow-md ring-1 ring-[#4ec9b0]/30' : 'border-[#333333] hover:bg-[#2a2d2e]'
                 }`}
               >
                 <div className="space-y-1.5 min-w-0 flex-1 pr-4">
@@ -74,7 +75,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                       {session.title}
                     </span>
                     <span
-                      className={`text-[10px] font-mono px-1.5 py-0.5 rounded uppercase font-semibold ${
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full uppercase font-semibold ${
                         session.mode === 'plan'
                           ? 'bg-[#182d40] text-[#9cdcfe]'
                           : 'bg-[#143831] text-[#4ec9b0]'
@@ -106,14 +107,14 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     {/* Participant Avatars */}
                     <div className="flex items-center -space-x-1">
                       {participants.map((agent) => (
-                        <div
-                          key={agent.id}
-                          title={agent.name}
-                          className="w-4 h-4 rounded flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
-                          style={{ backgroundColor: agent.color }}
-                        >
-                          {agent.initial}
-                        </div>
+                        <Tooltip key={agent.id} content={agent.name} position="top">
+                          <div
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shadow-sm ring-1 ring-[#252526]"
+                            style={{ backgroundColor: agent.color }}
+                          >
+                            {agent.initial}
+                          </div>
+                        </Tooltip>
                       ))}
                     </div>
                   </div>
@@ -122,19 +123,20 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => onSelectSession(session.id)}
-                    className="flex items-center gap-1 px-3 py-1 bg-[#0e639c] hover:bg-[#1177bb] text-white text-xs rounded transition-colors"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] text-white text-xs rounded-xl font-medium transition-colors shadow-sm cursor-pointer"
                   >
                     <span>Buka</span>
                     <ArrowRight size={12} />
                   </button>
 
-                  <button
-                    onClick={() => onDeleteSession(session.id)}
-                    title="Hapus Sesi"
-                    className="p-1.5 text-[#858585] hover:text-[#ce9178] hover:bg-[#382626] rounded transition-colors"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  <Tooltip content="Hapus Sesi" position="bottom">
+                    <button
+                      onClick={() => onDeleteSession(session.id)}
+                      className="p-2 text-[#858585] hover:text-[#ce9178] hover:bg-[#322020] rounded-xl transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             );

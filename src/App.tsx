@@ -18,8 +18,14 @@ import { AgentStore } from './storage/AgentStore';
 import { HelpDocumentationModal, type HelpTabType } from './components/HelpDocumentationModal';
 import { ShortcutSetupModal } from './components/ShortcutSetupModal';
 import type { Agent, Session, SessionMessage, UserProfile, DiscussionModeType, CommandApprovalRequest, AttachedFile } from './types';
-import { selectFolderDialog, type FileEntry } from './tauri/fsBridge';
-import { Box, FileText, CheckCircle2, Terminal as TerminalIcon, Copy, Check, Download, Paperclip } from 'lucide-react';
+import { selectFolderDialog, selectFileDialog, selectSaveFileDialog, readFileContent, saveFileContent, detectObsidianVaults, type FileEntry } from './tauri/fsBridge';
+import { ProviderStore } from './storage/ProviderStore';
+import { ObsidianStore } from './storage/ObsidianStore';
+import { globalVaultManager } from './obsidian/VaultManager';
+import { ApiKeyMissingError, ApiKeyInvalidError } from './llm/errors';
+import { Box, FileText, CheckCircle2, Terminal as TerminalIcon, Copy, Check, Download, Paperclip, BookOpen, PanelLeftOpen } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Tooltip } from './components/Tooltip';
 import { ToastContainer, type ToastMessage } from './components/Toast';
 
 export function App() {
@@ -55,6 +61,18 @@ export function App() {
   const [workspacePath, setWorkspacePath] = useState<string>(() => {
     return localStorage.getItem('multi_agent_workspace_dir') || '';
   });
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    const saved = localStorage.getItem('multi_agent_sidebar_open');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const handleToggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem('multi_agent_sidebar_open', String(next));
+      return next;
+    });
+  };
 
   const handleOpenFolder = async () => {
     try {
@@ -101,6 +119,29 @@ export function App() {
     const prompted = localStorage.getItem('multi_agent_shortcut_setup_prompted');
     if (!prompted) {
       setIsShortcutModalOpen(true);
+    }
+  }, []);
+
+  // Inisialisasi deteksi otomatis Obsidian Vault di komputer pengguna
+  useEffect(() => {
+    const config = ObsidianStore.loadConfig();
+    if (!config.vaultPath) {
+      detectObsidianVaults().then((vaults) => {
+        if (vaults && vaults.length > 0) {
+          const target = vaults.find((v) => v.is_open) || vaults[0];
+          if (target) {
+            globalVaultManager.scanVault(target.path).then((notes) => {
+              ObsidianStore.saveConfig({
+                vaultPath: target.path,
+                enabled: true,
+                notesCache: notes,
+                lastIndexedAt: Date.now(),
+              });
+              addToast('info', `Obsidian Vault otomatis terhubung: ${target.name} (${notes.length} catatan)`, 'Obsidian Siap');
+            }).catch(() => {});
+          }
+        }
+      }).catch(() => {});
     }
   }, []);
 
@@ -161,21 +202,36 @@ export function App() {
     }
   };
 
-  const handleFileAction = (action: 'new-file' | 'new-text-file' | 'new-window' | 'open-file' | 'open-folder' | 'open-recent' | 'open-workspace' | 'save' | 'save-as') => {
+  const handleFileAction = async (action: 'new-file' | 'new-text-file' | 'new-window' | 'open-file' | 'open-folder' | 'open-recent' | 'open-workspace' | 'save' | 'save-as') => {
     switch (action) {
       case 'new-file':
-        handleNewSession();
-        addToast('success', 'Sesi kerja baru berhasil dibuat');
-        break;
       case 'new-text-file':
-        setSelectedFile({ name: 'untitled.txt', path: 'untitled.txt', is_dir: false, size: 0 });
-        setActiveTab('file');
-        addToast('info', 'Membuka editor berkas teks baru');
+        if (workspacePath) {
+          window.dispatchEvent(new CustomEvent('app:create-workspace-file'));
+          addToast('info', 'Ketik nama berkas baru di workspace lalu tekan Enter');
+        } else {
+          setSelectedFile({ name: 'untitled.txt', path: 'untitled.txt', is_dir: false, size: 0 });
+          setActiveTab('file');
+          addToast('info', 'Editor berkas teks baru dibuka (Gunakan Save As untuk menyimpan ke disk)');
+        }
         break;
       case 'new-window':
         addToast('info', 'Jendela Multi-Agent aktif');
         break;
       case 'open-file':
+        try {
+          const selected = await selectFileDialog();
+          if (selected) {
+            const fileName = selected.split(/[\/\\]/).pop() || selected;
+            setSelectedFile({ name: fileName, path: selected, is_dir: false, size: 0 });
+            setActiveTab('file');
+            addToast('success', `Berkas dibuka: ${fileName}`);
+          }
+        } catch (err) {
+          console.error('Failed to open file:', err);
+          addToast('error', 'Gagal membuka dialog berkas');
+        }
+        break;
       case 'open-folder':
       case 'open-workspace':
         handleOpenFolder();
@@ -185,11 +241,30 @@ export function App() {
         addToast('info', 'Menampilkan riwayat sesi terkini');
         break;
       case 'save':
+        if (activeTab === 'file' && selectedFile) {
+          window.dispatchEvent(new CustomEvent('app:editor-action', { detail: { action: 'save' } }));
+        }
         SessionStore.saveSessions(sessions);
-        addToast('success', 'Workspace dan sesi berhasil disimpan');
+        addToast('success', 'Penyimpanan berhasil');
         break;
       case 'save-as':
-        if (currentSession.walkthrough) {
+        if (activeTab === 'file' && selectedFile) {
+          try {
+            const targetPath = await selectSaveFileDialog(selectedFile.name);
+            if (targetPath) {
+              const content = await readFileContent(selectedFile.path);
+              const ok = await saveFileContent(targetPath, content);
+              if (ok) {
+                const newName = targetPath.split(/[\/\\]/).pop() || targetPath;
+                setSelectedFile({ name: newName, path: targetPath, is_dir: false, size: 0 });
+                addToast('success', `Berkas disimpan sebagai: ${newName}`);
+              }
+            }
+          } catch (err) {
+            console.error('Failed to save as:', err);
+            addToast('error', 'Gagal menyimpan berkas');
+          }
+        } else if (currentSession.walkthrough) {
           handleDownloadMarkdown(`walkthrough-${currentSession.id}.md`, currentSession.walkthrough);
         } else {
           SessionStore.saveSessions(sessions);
@@ -200,31 +275,16 @@ export function App() {
   };
 
   const handleEditAction = (action: 'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'find' | 'replace') => {
-    switch (action) {
-      case 'undo':
-        document.execCommand('undo');
-        break;
-      case 'redo':
-        document.execCommand('redo');
-        break;
-      case 'cut':
-        document.execCommand('cut');
-        break;
-      case 'copy':
-        document.execCommand('copy');
-        addToast('info', 'Teks disalin ke clipboard');
-        break;
-      case 'paste':
-        navigator.clipboard?.readText().then((text) => {
-          if (text) addToast('info', 'Teks ditempel dari clipboard');
-        }).catch(() => {});
-        break;
-      case 'find':
-        addToast('info', 'Gunakan bilah pencarian atau filter chat');
-        break;
-      case 'replace':
-        addToast('info', 'Gunakan editor berkas untuk fitur replace kode');
-        break;
+    if (action === 'find' || action === 'replace') {
+      if (activeTab !== 'file') {
+        setActiveTab('file');
+      }
+    }
+    window.dispatchEvent(new CustomEvent('app:editor-action', { detail: { action } }));
+    if (action === 'copy') {
+      addToast('info', 'Aksi salin (copy) dijalankan');
+    } else if (action === 'paste') {
+      addToast('info', 'Aksi tempel (paste) dijalankan');
     }
   };
 
@@ -234,6 +294,9 @@ export function App() {
       if ((e.ctrlKey || e.metaKey) && e.key === '`') {
         e.preventDefault();
         setIsTerminalOpen((prev) => !prev);
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        handleToggleSidebar();
       } else if (e.key === 'F1') {
         e.preventDefault();
         setHelpInitialTab('overview');
@@ -354,67 +417,193 @@ export function App() {
       )
     );
 
+    // Pengecekan awal konfigurasi API Key sebelum menjalankan orkestrasi
+    const allProviders = ProviderStore.loadProviders();
+    const hasAnyConfiguredApiKey = allProviders.some((p) => p.apiKey && p.apiKey.trim().length > 0);
+
+    const participatingProviders = activeAgents.map((ag) => {
+      let prov = allProviders.find((p) => p.id === ag.llmProviderId);
+      if (!prov) {
+        if (ag.llmProviderId === 'anthropic-claude') prov = allProviders.find((p) => p.id === 'prov-anthropic' || p.providerType === 'anthropic');
+        else if (ag.llmProviderId === 'openai-gpt4o') prov = allProviders.find((p) => p.id === 'prov-openai');
+        else if (ag.llmProviderId === 'local-lm-studio') prov = allProviders.find((p) => p.id === 'prov-lm-studio');
+      }
+      return { agent: ag, provider: prov };
+    });
+
+    const targetWithMissingKey = participatingProviders.find(({ provider }) => {
+      // Jika provider adalah cloud endpoint dan apiKey kosong
+      if (provider && provider.category === 'endpoint' && (!provider.apiKey || !provider.apiKey.trim())) {
+        return true;
+      }
+      // Jika provider tidak terdaftar dan belum ada API key apapun di sistem
+      if (!provider && !hasAnyConfiguredApiKey) {
+        return true;
+      }
+      return false;
+    });
+
+    if (targetWithMissingKey) {
+      const sysMsg: SessionMessage = {
+        id: `msg-sys-missing-key-${Date.now()}`,
+        timestamp: Date.now(),
+        speaker: { type: 'system', event: 'api-key-missing' },
+        content: 'Silakan masukkan API key Anda terlebih dahulu untuk memulai percakapan.',
+      };
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === currentSessionId
+            ? {
+                ...s,
+                messages: [...s.messages, sysMsg],
+                lastActiveAt: Date.now(),
+              }
+            : s
+        )
+      );
+      addToast('warning', 'Silakan masukkan API key Anda terlebih dahulu di Pengaturan.', 'API Key Diperlukan');
+      return; // STOP! Tanpa mock atau respon palsu!
+    }
+
+    // Resolusi wikilink [[...]] dari Obsidian jika ada di dalam teks pengguna
+    let enrichedText = text;
+    const wikilinkMatches = Array.from(text.matchAll(/\[\[(.*?)\]\]/g));
+    if (wikilinkMatches.length > 0) {
+      for (const match of wikilinkMatches) {
+        const noteTitle = match[1].trim();
+        try {
+          const noteData = await globalVaultManager.readNote(noteTitle);
+          enrichedText += `\n\n[Konteks Terlampir dari Obsidian: [[${noteData.title}]] (~${noteData.tokenEstimate} token)]:\n${noteData.content}`;
+        } catch {
+          // Lewatkan jika catatan tidak ditemukan di vault
+        }
+      }
+    }
+
     // Orchestrated Multi-Agent Turn-Taking via Central Orchestrator
     if (activeAgents.length > 0) {
       globalOrchestrator.setStrategy(discussionStrategy);
 
-      await globalOrchestrator.executePlanDiscussion(
-        text,
-        1,
-        activeAgents,
-        userProfile,
-        updatedMessages,
-        {
-          onAgentStartThinking: (agent) => {
-            setTypingAgent(agent);
+      try {
+        await globalOrchestrator.executePlanDiscussion(
+          enrichedText,
+          1,
+          activeAgents,
+          userProfile,
+          updatedMessages,
+          {
+            onAgentStartThinking: (agent) => {
+              setTypingAgent(agent);
+            },
+            onAgentMessage: (agentMsg) => {
+              setTypingAgent(null);
+              setSessions((prev) =>
+                prev.map((s) =>
+                  s.id === currentSessionId
+                    ? {
+                        ...s,
+                        messages: [...s.messages, agentMsg],
+                        lastActiveAt: Date.now(),
+                      }
+                    : s
+                )
+              );
+            },
+            onRoundComplete: (_roundNum, evaluation) => {
+              setTypingAgent(null);
+              if (evaluation.planDocument) {
+                setSessions((prev) =>
+                  prev.map((s) =>
+                    s.id === currentSessionId
+                      ? {
+                          ...s,
+                          planDocument: evaluation.planDocument,
+                        }
+                      : s
+                  )
+                );
+              }
+            },
+            onPlanGenerated: (evaluation) => {
+              if (evaluation.planDocument) {
+                setSessions((prev) =>
+                  prev.map((s) =>
+                    s.id === currentSessionId
+                      ? {
+                          ...s,
+                          planDocument: evaluation.planDocument,
+                        }
+                      : s
+                  )
+                );
+                addToast('success', 'PlanDocument disepakati oleh tim multi-agent.', 'Konsensus Selesai');
+              }
+            },
           },
-          onAgentMessage: (agentMsg) => {
-            setTypingAgent(null);
+          mentionedAgentId
+        );
+      } catch (err: unknown) {
+        setTypingAgent(null);
+        if (err instanceof ApiKeyMissingError) {
+          const sysMsg: SessionMessage = {
+            id: `msg-sys-missing-key-${Date.now()}`,
+            timestamp: Date.now(),
+            speaker: { type: 'system', event: 'api-key-missing' },
+            content: 'Silakan masukkan API key Anda terlebih dahulu untuk memulai percakapan.',
+          };
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === currentSessionId
+                ? { ...s, messages: [...s.messages, sysMsg], lastActiveAt: Date.now() }
+                : s
+            )
+          );
+          addToast('warning', 'Silakan masukkan API key Anda terlebih dahulu di Pengaturan.', 'API Key Diperlukan');
+        } else if (err instanceof ApiKeyInvalidError) {
+          const sysMsg: SessionMessage = {
+            id: `msg-sys-invalid-key-${Date.now()}`,
+            timestamp: Date.now(),
+            speaker: { type: 'system', event: 'api-key-error' },
+            content: 'Ada sesuatu yang salah pada API key Anda. Silakan periksa kembali API key atau kuota Anda di Pengaturan.',
+          };
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === currentSessionId
+                ? { ...s, messages: [...s.messages, sysMsg], lastActiveAt: Date.now() }
+                : s
+            )
+          );
+          addToast('error', 'Ada sesuatu yang salah pada API key Anda.', 'API Key Error');
+        } else {
+          const errDetail = err instanceof Error ? err.message : String(err);
+          const isKeyIssue =
+            errDetail.includes('401') ||
+            errDetail.includes('403') ||
+            errDetail.toLowerCase().includes('api key') ||
+            errDetail.toLowerCase().includes('unauthorized') ||
+            errDetail.toLowerCase().includes('authentication') ||
+            errDetail.toLowerCase().includes('quota');
+
+          if (isKeyIssue) {
+            const sysMsg: SessionMessage = {
+              id: `msg-sys-invalid-key-${Date.now()}`,
+              timestamp: Date.now(),
+              speaker: { type: 'system', event: 'api-key-error' },
+              content: 'Ada sesuatu yang salah pada API key Anda. Silakan periksa kembali API key atau kuota Anda di Pengaturan.',
+            };
             setSessions((prev) =>
               prev.map((s) =>
                 s.id === currentSessionId
-                  ? {
-                      ...s,
-                      messages: [...s.messages, agentMsg],
-                      lastActiveAt: Date.now(),
-                    }
+                  ? { ...s, messages: [...s.messages, sysMsg], lastActiveAt: Date.now() }
                   : s
               )
             );
-          },
-          onRoundComplete: (_roundNum, evaluation) => {
-            setTypingAgent(null);
-            if (evaluation.planDocument) {
-              setSessions((prev) =>
-                prev.map((s) =>
-                  s.id === currentSessionId
-                    ? {
-                        ...s,
-                        planDocument: evaluation.planDocument,
-                      }
-                    : s
-                )
-              );
-            }
-          },
-          onPlanGenerated: (evaluation) => {
-            if (evaluation.planDocument) {
-              setSessions((prev) =>
-                prev.map((s) =>
-                  s.id === currentSessionId
-                    ? {
-                        ...s,
-                        planDocument: evaluation.planDocument,
-                      }
-                    : s
-                )
-              );
-              addToast('success', 'PlanDocument disepakati oleh tim multi-agent.', 'Konsensus Selesai');
-            }
-          },
-        },
-        mentionedAgentId
-      );
+            addToast('error', 'Ada sesuatu yang salah pada API key Anda.', 'API Key Error');
+          } else {
+            addToast('error', `Gagal menghubungkan agen: ${errDetail}`, 'Error Provider');
+          }
+        }
+      }
     }
   };
 
@@ -466,6 +655,21 @@ export function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleSaveToObsidian = async (title: string, content: string) => {
+    const config = ObsidianStore.loadConfig();
+    if (!config.vaultPath) {
+      addToast('warning', 'Hubungkan Obsidian Vault terlebih dahulu di Pengaturan.', 'Vault Belum Terhubung');
+      setIsSettingsOpen(true);
+      return;
+    }
+    try {
+      const res = await globalVaultManager.writeNote(title, content, config.sessionExportFolder || 'MultiAgent/Sessions');
+      addToast('success', res.message, 'Tersimpan di Obsidian');
+    } catch (err: any) {
+      addToast('error', `Gagal menyimpan: ${err.message}`, 'Gagal Menyimpan');
+    }
+  };
+
   return (
     <div
       className="flex flex-col w-screen h-screen bg-[#1e1e1e] text-[#cccccc] overflow-hidden select-none font-sans"
@@ -475,6 +679,8 @@ export function App() {
       <TopMenuBar
         onToggleTerminal={() => setIsTerminalOpen((prev) => !prev)}
         isTerminalOpen={isTerminalOpen}
+        onToggleSidebar={handleToggleSidebar}
+        isSidebarOpen={isSidebarOpen}
         onFileAction={handleFileAction}
         onEditAction={handleEditAction}
         onZoomChange={handleZoomChange}
@@ -491,21 +697,47 @@ export function App() {
       />
 
       {/* Main Workspace: Sidebar + Center Content Area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
-        <Sidebar
-          onNewSession={handleNewSession}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          selectedFile={selectedFile}
-          onSelectFile={(file) => setSelectedFile(file)}
-          onToggleTerminal={() => setIsTerminalOpen((prev) => !prev)}
-          isTerminalOpen={isTerminalOpen}
-          workspacePath={workspacePath}
-          onOpenFolder={handleOpenFolder}
-          onCloseFolder={handleCloseFolder}
-        />
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Left Sidebar with Smooth Slide Collapse/Expand */}
+        <AnimatePresence initial={false}>
+          {isSidebarOpen && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 240, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.18, ease: 'easeInOut' }}
+              className="h-full overflow-hidden shrink-0"
+            >
+              <Sidebar
+                onNewSession={handleNewSession}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                selectedFile={selectedFile}
+                onSelectFile={(file) => setSelectedFile(file)}
+                onToggleTerminal={() => setIsTerminalOpen((prev) => !prev)}
+                isTerminalOpen={isTerminalOpen}
+                workspacePath={workspacePath}
+                onOpenFolder={handleOpenFolder}
+                onCloseFolder={handleCloseFolder}
+                onToggleSidebar={handleToggleSidebar}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Floating Reopen Button when Sidebar is Closed */}
+        {!isSidebarOpen && (
+          <Tooltip content="Buka Sidebar (Ctrl+B)" position="right">
+            <button
+              onClick={handleToggleSidebar}
+              className="absolute top-2.5 left-2.5 z-30 flex items-center gap-1.5 px-3 py-1.5 bg-[#252526]/95 hover:bg-[#2d2d2d] active:scale-95 text-[#cccccc] hover:text-white border border-[#3c3c3c] rounded-xl shadow-xl backdrop-blur-md transition-all cursor-pointer text-xs group"
+            >
+              <PanelLeftOpen size={14} className="text-[#007acc] group-hover:scale-110 transition-transform" />
+              <span className="text-[11px] font-medium">Buka Sidebar</span>
+            </button>
+          </Tooltip>
+        )}
 
         {/* Center Main Stage + Terminal Dock */}
         <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -581,6 +813,13 @@ export function App() {
                           )}
                         </button>
                         <button
+                          onClick={() => handleSaveToObsidian(`walkthrough-${currentSession.id}`, currentSession.walkthrough!)}
+                          className="flex items-center gap-1 px-2.5 py-1 bg-[#1e3a2f] hover:bg-[#284f40] text-[#4ec9b0] rounded text-xs transition-colors cursor-pointer border border-[#2b5a48]"
+                        >
+                          <BookOpen size={12} />
+                          <span>Simpan ke Obsidian</span>
+                        </button>
+                        <button
                           onClick={() => handleDownloadMarkdown(`walkthrough-${currentSession.id}.md`, currentSession.walkthrough!)}
                           className="flex items-center gap-1 px-2.5 py-1 bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#094771] text-white rounded text-xs transition-colors cursor-pointer"
                         >
@@ -615,6 +854,17 @@ export function App() {
                         <span className="text-[10px] font-mono px-2 py-0.5 bg-[#1e3a2f] text-[#4ec9b0] rounded">
                           PlanDocument
                         </span>
+                        <button
+                          onClick={() => {
+                            const markdown = `# Plan: ${currentSession.planDocument?.goal}\n\n` +
+                              currentSession.planDocument?.tasks.map((t, i) => `### Task ${i+1}: ${t.description}\n- **Assigned:** ${t.assignedAgentId}\n- **Criteria:** ${t.successCriteria}\n`).join('\n');
+                            handleSaveToObsidian(`plan-${currentSession.id}`, markdown);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1 bg-[#1e3a2f] hover:bg-[#284f40] text-[#4ec9b0] rounded text-xs transition-colors cursor-pointer border border-[#2b5a48]"
+                        >
+                          <BookOpen size={12} />
+                          <span>Simpan ke Obsidian</span>
+                        </button>
                         <button
                           onClick={() => {
                             const markdown = `# Plan: ${currentSession.planDocument?.goal}\n\n` +
@@ -723,6 +973,7 @@ export function App() {
                   userDisplayName={userProfile.displayName}
                   planDocument={currentSession.planDocument}
                   onSwitchToBuild={() => handleToggleMode('build')}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
                 />
 
                 <PromptBar

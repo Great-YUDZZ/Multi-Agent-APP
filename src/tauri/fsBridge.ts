@@ -87,6 +87,29 @@ export async function listDirectory(dirPath: string = '.'): Promise<FileEntry[]>
       return [];
     }
   }
+
+  // Node.js test environment fallback
+  if (typeof window === 'undefined') {
+    try {
+      const dynamicImport = new Function('specifier', 'return import(specifier)');
+      const fs: any = await dynamicImport('node:fs');
+      const path: any = await dynamicImport('node:path');
+      const proc = (globalThis as unknown as { process?: { env?: Record<string, string> } }).process;
+      const home = proc?.env?.HOME || '.';
+      const expanded = dirPath.startsWith('~/')
+        ? path.join(home, dirPath.slice(2))
+        : dirPath;
+      if (fs.existsSync(expanded)) {
+        const entries = fs.readdirSync(expanded, { withFileTypes: true });
+        return entries.map((e: any) => ({
+          name: e.name,
+          path: path.join(expanded, e.name),
+          is_dir: e.isDirectory(),
+          size: e.isFile() ? fs.statSync(path.join(expanded, e.name)).size : 0,
+        }));
+      }
+    } catch {}
+  }
   
   // Browser preview fallback
   const normalized = dirPath.replace(/\\/g, '/').split('/').filter(Boolean).pop() || 'root';
@@ -108,6 +131,17 @@ export async function readFileContent(filePath: string): Promise<string> {
     }
   }
 
+  // Node.js test environment fallback
+  if (typeof window === 'undefined') {
+    try {
+      const dynamicImport = new Function('specifier', 'return import(specifier)');
+      const fs: any = await dynamicImport('node:fs');
+      if (fs.existsSync(filePath)) {
+        return fs.readFileSync(filePath, 'utf-8');
+      }
+    } catch {}
+  }
+
   return `// Berkas: ${filePath}\n// Tidak ada konten berkas yang tersimpan.`;
 }
 
@@ -121,6 +155,54 @@ export async function saveFileContent(filePath: string, content: string): Promis
       return false;
     }
   }
+
+  // Node.js test environment fallback
+  if (typeof window === 'undefined') {
+    try {
+      const dynamicImport = new Function('specifier', 'return import(specifier)');
+      const fs: any = await dynamicImport('node:fs');
+      const path: any = await dynamicImport('node:path');
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(filePath, content, 'utf-8');
+      return true;
+    } catch (e) {
+      console.error('Node saveFileContent error:', e);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export async function createDirectory(dirPath: string): Promise<boolean> {
+  if (isTauriEnvironment()) {
+    try {
+      await invoke('create_directory', { dirPath });
+      return true;
+    } catch (err) {
+      console.error('Tauri create_directory error:', err);
+      return false;
+    }
+  }
+
+  // Node.js test environment fallback
+  if (typeof window === 'undefined') {
+    try {
+      const dynamicImport = new Function('specifier', 'return import(specifier)');
+      const fs: any = await dynamicImport('node:fs');
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+      return true;
+    } catch (e) {
+      console.error('Node createDirectory error:', e);
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -152,6 +234,32 @@ export async function selectFolderDialog(): Promise<string | null> {
   return '/media/yudz/FLASHDISK/Multi Agent APP';
 }
 
+export async function selectFileDialog(): Promise<string | null> {
+  if (isTauriEnvironment()) {
+    try {
+      const path = await invoke<string | null>('select_file_dialog');
+      return path;
+    } catch (err) {
+      console.warn('select_file_dialog error:', err);
+      return null;
+    }
+  }
+  return '/media/yudz/FLASHDISK/Multi Agent APP/README.md';
+}
+
+export async function selectSaveFileDialog(defaultName?: string): Promise<string | null> {
+  if (isTauriEnvironment()) {
+    try {
+      const path = await invoke<string | null>('select_save_file_dialog', { defaultName });
+      return path;
+    } catch (err) {
+      console.warn('select_save_file_dialog error:', err);
+      return null;
+    }
+  }
+  return `/media/yudz/FLASHDISK/Multi Agent APP/${defaultName || 'untitled.txt'}`;
+}
+
 export async function getCurrentWorkingDir(): Promise<string> {
   if (isTauriEnvironment()) {
     try {
@@ -161,6 +269,24 @@ export async function getCurrentWorkingDir(): Promise<string> {
     }
   }
   return '.';
+}
+
+export interface DetectedVault {
+  path: string;
+  name: string;
+  is_open: boolean;
+}
+
+export async function detectObsidianVaults(): Promise<DetectedVault[]> {
+  if (isTauriEnvironment()) {
+    try {
+      return await invoke<DetectedVault[]>('detect_obsidian_vaults');
+    } catch (err) {
+      console.warn('detect_obsidian_vaults error:', err);
+      return [];
+    }
+  }
+  return [];
 }
 
 

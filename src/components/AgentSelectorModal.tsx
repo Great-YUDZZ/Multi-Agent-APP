@@ -18,6 +18,11 @@ import {
   ArrowRight,
   ArrowLeft,
   FileCode,
+  Crown,
+  Layout,
+  Server,
+  Search,
+  CheckSquare,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Agent, ProviderConfig, TrustLevel, Skill } from '../types';
@@ -25,6 +30,7 @@ import { ProviderStore } from '../storage/ProviderStore';
 import { AgentStore } from '../storage/AgentStore';
 import { globalSkillRegistry } from '../skills/SkillRegistry';
 import { globalProviderRegistry } from '../llm/ProviderRegistry';
+import { AGENT_ROLE_TEMPLATES, type AgentRoleTemplate } from '../data/agentTemplates';
 
 interface AgentSelectorModalProps {
   isOpen: boolean;
@@ -60,6 +66,7 @@ export const AgentSelectorModal: React.FC<AgentSelectorModalProps> = ({
 
   // Wizard Step State (1: Identitas, 2: Instruksi, 3: Skills, 4: Permissions, 5: Review & Test Chat)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
   // Form State
   const [formName, setFormName] = useState('');
@@ -130,15 +137,38 @@ export const AgentSelectorModal: React.FC<AgentSelectorModalProps> = ({
     }
   };
 
+  const handleApplyTemplate = (tpl: AgentRoleTemplate) => {
+    setSelectedTemplateId(tpl.id);
+    setFormName(tpl.name);
+    setFormRole(tpl.role);
+    setFormInitial(tpl.initial);
+    setFormColor(tpl.color);
+    setFormInstructions(tpl.instructions);
+    setFormSkillIds(tpl.defaultSkillIds);
+    applyTrustLevelPreset(tpl.trustLevel);
+    if (tpl.permissions) {
+      setFormInternetAccess(tpl.permissions.internetAccess);
+      setFormTerminalAccess(tpl.permissions.terminalAccess.mode);
+      if (tpl.permissions.terminalAccess.alwaysAsk) {
+        setFormAlwaysAsk(tpl.permissions.terminalAccess.alwaysAsk.join(', '));
+      }
+    }
+  };
+
   const handleOpenCreateAgent = () => {
     setEditingAgentId(null);
+    setSelectedTemplateId(null);
     setWizardStep(1);
     setFormName('Agent Baru');
     setFormRole('Software Architect & Systems Specialist');
     setFormInitial('A');
     setFormColor(VSCODE_COLORS[0]);
     setFormInstructions('Kamu adalah asisten AI teknis yang fokus memberikan analisis mendalam, struktur modular, dan kriteria sukses teruji.');
-    setFormProviderId(providers[0]?.id || 'mock-offline');
+    const firstProv = providers[0];
+    const defaultVal = firstProv
+      ? (firstProv.models && firstProv.models.length > 0 ? `${firstProv.id}:::${firstProv.models[0]}` : firstProv.id)
+      : 'mock-offline';
+    setFormProviderId(defaultVal);
     setFormSkillIds(['web-search', 'code-audit']);
     applyTrustLevelPreset('review-driven');
     setDraftMessages([]);
@@ -148,6 +178,8 @@ export const AgentSelectorModal: React.FC<AgentSelectorModalProps> = ({
   const handleOpenEditAgent = (e: React.MouseEvent, agent: Agent) => {
     e.stopPropagation();
     setEditingAgentId(agent.id);
+    const matchedTpl = AGENT_ROLE_TEMPLATES.find((t) => t.role === agent.role || t.name === agent.name);
+    setSelectedTemplateId(matchedTpl ? matchedTpl.id : null);
     setWizardStep(1);
     setFormName(agent.name);
     setFormRole(agent.role);
@@ -274,12 +306,12 @@ ${newSkillContent.trim()}`;
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="w-full max-w-2xl bg-[#252526] border border-[#3c3c3c] rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+            className="w-full max-w-2xl bg-[#252526] border border-[#3c3c3c] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
           >
             {/* Header */}
             <div className="px-5 py-3.5 border-b border-[#333333] flex items-center justify-between bg-[#1f1f1f]">
               <div className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded bg-[#1e3a2f] flex items-center justify-center text-[#4ec9b0]">
+                <div className="w-7 h-7 rounded-xl bg-[#1e3a2f] flex items-center justify-center text-[#4ec9b0]">
                   <Cpu size={16} />
                 </div>
                 <div>
@@ -309,7 +341,7 @@ ${newSkillContent.trim()}`;
                 )}
                 <button
                   onClick={() => (isEditing ? setIsEditing(false) : onClose())}
-                  className="text-[#858585] hover:text-white p-1 rounded hover:bg-[#2a2d2e] transition-colors"
+                  className="text-[#858585] hover:text-white p-1.5 rounded-xl hover:bg-[#2a2d2e] transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -327,28 +359,42 @@ ${newSkillContent.trim()}`;
                       <div
                         key={agent.id}
                         onClick={() => toggleAgent(agent.id)}
-                        className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
+                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-[#1e2a38] border-[#007acc]'
+                            ? 'bg-[#1e2a38] border-[#007acc] shadow-sm ring-1 ring-[#007acc]/30'
                             : 'bg-[#1e1e1e] border-[#333333] hover:border-[#444444]'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div
-                            className="w-8 h-8 rounded flex items-center justify-center text-white font-bold text-xs shrink-0 shadow"
+                            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm"
                             style={{ backgroundColor: agent.color }}
                           >
                             {agent.initial}
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-xs text-white truncate">
                                 {agent.name}
                               </span>
-                              <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[#2d2d2d] text-[#858585] rounded">
+                              <span className="text-[10px] font-mono px-2 py-0.5 bg-[#2d2d2d] text-[#858585] rounded-full">
                                 {agent.role}
                               </span>
+                              {(() => {
+                                const pid = agent.llmProviderId;
+                                if (!pid) return null;
+                                const isSub = pid.includes(':::');
+                                const baseId = isSub ? pid.split(':::')[0] : pid;
+                                const subModel = isSub ? pid.split(':::')[1] : null;
+                                const prov = providers.find((p) => p.id === baseId);
+                                const label = prov ? (subModel ? `${prov.label}: ${subModel}` : `${prov.label}: ${prov.model}`) : pid;
+                                return (
+                                  <span className="text-[10px] font-mono px-2 py-0.5 bg-[#1e2a38] text-[#9cdcfe] rounded-full border border-[#007acc]/30 truncate max-w-[180px]">
+                                    {label}
+                                  </span>
+                                );
+                              })()}
                             </div>
                             <p className="text-[11px] text-[#858585] truncate mt-0.5">
                               {agent.instructions}
@@ -359,20 +405,18 @@ ${newSkillContent.trim()}`;
                         <div className="flex items-center gap-2 shrink-0 ml-3">
                           <button
                             onClick={(e) => handleOpenEditAgent(e, agent)}
-                            title="Edit Agent"
-                            className="p-1.5 text-[#858585] hover:text-white hover:bg-[#2a2d2e] rounded transition-colors"
+                            className="p-1.5 text-[#858585] hover:text-white hover:bg-[#2a2d2e] rounded-xl transition-colors"
                           >
                             <Edit2 size={13} />
                           </button>
                           <button
                             onClick={(e) => handleDeleteAgent(e, agent.id)}
-                            title="Hapus Agent"
-                            className="p-1.5 text-[#858585] hover:text-[#ce9178] hover:bg-[#382626] rounded transition-colors"
+                            className="p-1.5 text-[#858585] hover:text-[#ce9178] hover:bg-[#382626] rounded-xl transition-colors"
                           >
                             <Trash2 size={13} />
                           </button>
                           <div
-                            className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
+                            className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-colors ${
                               isSelected
                                 ? 'bg-[#007acc] border-[#007acc] text-white'
                                 : 'border-[#444444] bg-[#252526]'
@@ -389,7 +433,7 @@ ${newSkillContent.trim()}`;
                 <div className="p-4 bg-[#1f1f1f] border-t border-[#333333] flex items-center justify-between">
                   <button
                     onClick={handleOpenCreateAgent}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2d2d2d] hover:bg-[#383838] border border-[#3c3c3c] text-white rounded text-xs transition-colors"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#2d2d2d] hover:bg-[#383838] border border-[#3c3c3c] text-white rounded-xl text-xs font-medium transition-colors shadow-sm"
                   >
                     <Plus size={13} />
                     <span>Buat Agent Baru (Wizard)</span>
@@ -397,7 +441,7 @@ ${newSkillContent.trim()}`;
 
                   <button
                     onClick={handleApply}
-                    className="px-4 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] text-white rounded text-xs font-semibold shadow transition-colors"
+                    className="px-4 py-1.5 bg-[#0e639c] hover:bg-[#1177bb] text-white rounded-xl text-xs font-semibold shadow transition-colors"
                   >
                     Terapkan ({currentSelection.length} Terpilih)
                   </button>
@@ -407,7 +451,7 @@ ${newSkillContent.trim()}`;
               /* View 2: 5-Step Wizard View */
               <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Step Indicator Header */}
-                <div className="bg-[#181818] px-5 py-2 border-b border-[#2d2d2d] flex items-center justify-between text-[11px]">
+                <div className="bg-[#181818] px-5 py-2.5 border-b border-[#2d2d2d] flex items-center justify-between text-[11px]">
                   {[
                     { s: 1, label: '1. Identitas & Preset' },
                     { s: 2, label: '2. Instruksi' },
@@ -418,9 +462,9 @@ ${newSkillContent.trim()}`;
                     <button
                       key={stepItem.s}
                       onClick={() => setWizardStep(stepItem.s as any)}
-                      className={`px-2 py-1 rounded transition-colors ${
+                      className={`px-3 py-1 rounded-full transition-colors ${
                         wizardStep === stepItem.s
-                          ? 'bg-[#0e639c] text-white font-bold'
+                          ? 'bg-[#0e639c] text-white font-bold shadow-sm'
                           : 'text-[#858585] hover:text-[#cccccc]'
                       }`}
                     >
@@ -433,6 +477,76 @@ ${newSkillContent.trim()}`;
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                   {wizardStep === 1 && (
                     <div className="space-y-4">
+                      {/* Section: Template Role Cepat */}
+                      <div className="space-y-2 pb-3 border-b border-[#333333]">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[11px] font-bold text-[#858585] uppercase tracking-wider flex items-center gap-1.5">
+                            <Sparkles size={12} className="text-[#007acc]" />
+                            <span>Pilih Template Role:</span>
+                          </label>
+                          <span className="text-[10px] text-[#4ec9b0] font-mono">
+                            5 Role Siap Pakai
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-5 gap-2">
+                          {AGENT_ROLE_TEMPLATES.map((tpl) => {
+                            const isChosen = selectedTemplateId === tpl.id || formRole === tpl.role;
+                            const RoleIcon =
+                              tpl.roleKey === 'pemimpin'
+                                ? Crown
+                                : tpl.roleKey === 'frontend'
+                                ? Layout
+                                : tpl.roleKey === 'backend'
+                                ? Server
+                                : tpl.roleKey === 'web-search'
+                                ? Search
+                                : CheckSquare;
+
+                            return (
+                              <button
+                                key={tpl.id}
+                                type="button"
+                                onClick={() => handleApplyTemplate(tpl)}
+                                className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                                  isChosen
+                                    ? 'bg-[#1e2a38] border-[#007acc] shadow-sm'
+                                    : 'bg-[#1e1e1e] border-[#333333] hover:border-[#444444]'
+                                }`}
+                              >
+                                <div>
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <div
+                                      className="w-5 h-5 rounded-md flex items-center justify-center text-white font-bold text-[10px]"
+                                      style={{ backgroundColor: tpl.color }}
+                                    >
+                                      <RoleIcon size={12} />
+                                    </div>
+                                    <span
+                                      className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
+                                        isChosen
+                                          ? 'bg-[#0e639c] text-white font-semibold'
+                                          : 'bg-[#2d2d2d] text-[#858585]'
+                                      }`}
+                                    >
+                                      {tpl.initial}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs font-semibold text-white truncate">
+                                    {tpl.title}
+                                  </div>
+                                  <div className="text-[10px] text-[#858585] mt-0.5 line-clamp-2 leading-tight">
+                                    {tpl.shortDesc}
+                                  </div>
+                                </div>
+                                <div className="mt-2 text-[9px] font-mono text-[#9cdcfe] truncate">
+                                  {tpl.badge}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-3 gap-3">
                         <div className="col-span-2">
                           <label className="block text-[11px] font-bold text-[#858585] uppercase mb-1">
@@ -442,7 +556,7 @@ ${newSkillContent.trim()}`;
                             type="text"
                             value={formName}
                             onChange={(e) => setFormName(e.target.value)}
-                            placeholder="Contoh: Agent S — Security Auditor"
+                            placeholder="Contoh: Lead Orchestrator"
                             className="w-full bg-[#1e1e1e] border border-[#3c3c3c] focus:border-[#007fd4] rounded px-3 py-1.5 text-xs text-white outline-none"
                           />
                         </div>
@@ -463,13 +577,13 @@ ${newSkillContent.trim()}`;
 
                       <div>
                         <label className="block text-[11px] font-bold text-[#858585] uppercase mb-1">
-                          Role & Spesialisasi:
+                          Role &amp; Spesialisasi:
                         </label>
                         <input
                           type="text"
                           value={formRole}
                           onChange={(e) => setFormRole(e.target.value)}
-                          placeholder="Contoh: Cloud Infrastructure & Container Specialist"
+                          placeholder="Contoh: Project Lead & Task Orchestrator"
                           className="w-full bg-[#1e1e1e] border border-[#3c3c3c] focus:border-[#007fd4] rounded px-3 py-1.5 text-xs text-[#cccccc] outline-none"
                         />
                       </div>
@@ -494,20 +608,49 @@ ${newSkillContent.trim()}`;
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-[#858585] uppercase mb-1">
-                          LLM Provider Backend:
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[11px] font-bold text-[#858585] uppercase">
+                            LLM Provider Backend &amp; Model:
+                          </label>
+                          <span className="text-[10px] text-[#4ec9b0] font-mono">
+                            Multi-Model per API Key Aktif
+                          </span>
+                        </div>
                         <select
-                          value={formProviderId}
+                          value={(() => {
+                            if (!formProviderId) return providers[0]?.id || 'mock-offline';
+                            if (formProviderId === 'mock-offline') return 'mock-offline';
+                            if (formProviderId.includes(':::')) return formProviderId;
+                            const matchedProv = providers.find((p) => p.id === formProviderId);
+                            if (matchedProv) {
+                              const active = matchedProv.models && matchedProv.models.length > 0 ? matchedProv.models : [matchedProv.model];
+                              return `${matchedProv.id}:::${active[0] || matchedProv.model}`;
+                            }
+                            return formProviderId;
+                          })()}
                           onChange={(e) => setFormProviderId(e.target.value)}
-                          className="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded px-3 py-1.5 text-xs text-white outline-none"
+                          className="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded px-3 py-1.5 text-xs text-white outline-none font-mono"
                         >
-                          {providers.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.label} ({p.model})
-                            </option>
-                          ))}
+                          {providers.map((p) => {
+                            const activeModels = p.models && p.models.length > 0 ? p.models : [p.model];
+                            return (
+                              <optgroup key={p.id} label={`${p.label} (${p.category === 'local' ? 'Local' : 'Cloud Endpoint'})`}>
+                                {activeModels.map((m) => {
+                                  const val = `${p.id}:::${m}`;
+                                  return (
+                                    <option key={val} value={val}>
+                                      {m} {m === p.model ? '(Utama)' : ''}
+                                    </option>
+                                  );
+                                })}
+                              </optgroup>
+                            );
+                          })}
+                          <option value="mock-offline">Simulasi Offline (Mock)</option>
                         </select>
+                        <p className="text-[10px] text-[#858585] mt-1">
+                          Satu API Key dapat memiliki banyak model aktif. Setiap agen bebas memilih model spesifik yang diinginkan.
+                        </p>
                       </div>
 
                       {/* Trust Level Presets */}
