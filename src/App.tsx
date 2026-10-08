@@ -18,7 +18,7 @@ import { AgentStore } from './storage/AgentStore';
 import { HelpDocumentationModal, type HelpTabType } from './components/HelpDocumentationModal';
 import { ShortcutSetupModal } from './components/ShortcutSetupModal';
 import type { Agent, Session, SessionMessage, UserProfile, DiscussionModeType, CommandApprovalRequest, AttachedFile } from './types';
-import { selectFolderDialog, selectFileDialog, selectSaveFileDialog, readFileContent, saveFileContent, detectObsidianVaults, type FileEntry } from './tauri/fsBridge';
+import { selectFolderDialog, selectFileDialog, selectSaveFileDialog, readFileContent, saveFileContent, listDirectory, detectObsidianVaults, type FileEntry } from './tauri/fsBridge';
 import { ProviderStore } from './storage/ProviderStore';
 import { ObsidianStore } from './storage/ObsidianStore';
 import { globalVaultManager } from './obsidian/VaultManager';
@@ -484,6 +484,21 @@ export function App() {
     if (activeAgents.length > 0) {
       globalOrchestrator.setStrategy(discussionStrategy);
 
+      // Siapkan workspaceContext jika workspacePath aktif
+      let workspaceContext: { path: string; files: string[] } | undefined = undefined;
+      if (workspacePath) {
+        try {
+          const entries = await listDirectory(workspacePath);
+          workspaceContext = {
+            path: workspacePath,
+            files: entries.map((e: FileEntry) => e.name),
+          };
+        } catch (err) {
+          console.warn('Gagal membaca berkas direktori workspace:', err);
+          workspaceContext = { path: workspacePath, files: [] };
+        }
+      }
+
       try {
         await globalOrchestrator.executePlanDiscussion(
           enrichedText,
@@ -540,7 +555,8 @@ export function App() {
               }
             },
           },
-          mentionedAgentId
+          mentionedAgentId,
+          workspaceContext
         );
       } catch (err: unknown) {
         setTypingAgent(null);
@@ -961,8 +977,14 @@ export function App() {
               <BuildTaskGraphView
                 planDocument={currentSession.planDocument}
                 availableAgents={availableAgents}
+                workspacePath={workspacePath}
                 onSwitchToPlan={() => handleToggleMode('plan')}
                 onSaveWalkthrough={handleSaveWalkthrough}
+                onOpenFileInEditor={(filePath) => {
+                  const fileName = filePath.split(/[\/\\]/).pop() || filePath;
+                  setSelectedFile({ name: fileName, path: filePath, is_dir: false, size: 0 });
+                  setActiveTab('file');
+                }}
               />
             ) : (
               <>
@@ -972,6 +994,7 @@ export function App() {
                   typingAgent={typingAgent}
                   userDisplayName={userProfile.displayName}
                   planDocument={currentSession.planDocument}
+                  availableAgents={availableAgents}
                   onSwitchToBuild={() => handleToggleMode('build')}
                   onOpenSettings={() => setIsSettingsOpen(true)}
                 />

@@ -70,7 +70,8 @@ export class Orchestrator {
     userProfile: UserProfile,
     allMessages: SessionMessage[],
     callbacks: DiscussionCallbacks,
-    mentionedAgentId?: string
+    mentionedAgentId?: string,
+    workspaceContext?: { path: string; files: string[] }
   ): Promise<ModeratorEvaluation> {
     const strategy = this.createStrategyInstance(activeAgents.map((a) => a.id));
 
@@ -81,7 +82,8 @@ export class Orchestrator {
       userProfile,
       allMessages,
       callbacks,
-      mentionedAgentId
+      mentionedAgentId,
+      workspaceContext
     );
   }
 
@@ -91,9 +93,10 @@ export class Orchestrator {
   async startBuildExecution(
     plan: PlanDocument,
     availableAgents: Agent[],
-    callbacks: BuildModeCallbacks
+    callbacks: BuildModeCallbacks,
+    workspacePath?: string
   ): Promise<void> {
-    this.buildController = new BuildModeController(plan, availableAgents);
+    this.buildController = new BuildModeController(plan, availableAgents, workspacePath);
     await this.buildController.startBuild(callbacks);
   }
 

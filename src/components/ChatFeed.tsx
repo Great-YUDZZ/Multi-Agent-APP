@@ -9,6 +9,7 @@ interface ChatFeedProps {
   typingAgent?: Agent | null;
   userDisplayName: string;
   planDocument?: PlanDocument;
+  availableAgents?: Agent[];
   onSwitchToBuild?: () => void;
   onOpenSettings?: () => void;
 }
@@ -19,6 +20,7 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
   typingAgent,
   userDisplayName,
   planDocument,
+  availableAgents,
   onSwitchToBuild,
   onOpenSettings,
 }) => {
@@ -310,52 +312,66 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
             initial={{ opacity: 0, scale: 0.99, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            className="bg-[#252526] border-2 border-[#4ec9b0]/80 rounded-2xl p-4.5 shadow-xl space-y-3 max-w-3xl my-4"
+            className="bg-[#252526] border-2 border-[#4ec9b0]/80 rounded-2xl p-4.5 shadow-xl space-y-3.5 max-w-3xl my-4"
           >
             <div className="flex items-center justify-between border-b border-[#333333] pb-2.5">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={18} className="text-[#4ec9b0]" />
                 <div>
                   <h3 className="text-xs font-bold text-[#ffffff] uppercase tracking-wider">
-                    PlanDocument Disepakati (Konsensus Moderator)
+                    USULAN RENCANA KERJA TIM (DRAFT PROPOSAL)
                   </h3>
-                  <p className="text-[11px] text-[#9cdcfe]">{planDocument.goal}</p>
+                  <p className="text-[11px] text-[#9cdcfe] font-medium">{planDocument.goal}</p>
                 </div>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 bg-[#1e3a2f] text-[#4ec9b0] border border-[#2d5a47] rounded-full font-bold">
-                FINISHED
+                SIAP DIEKSEKUSI
               </span>
             </div>
+
+            <p className="text-[11px] text-[#cccccc] leading-relaxed bg-[#1b1b1c] p-2.5 rounded-xl border border-[#2d2d2d]">
+              💡 Tim telah merumuskan pembagian tugas teknis di bawah ini. Anda dapat menginterupsi atau mengajukan revisi melalui chat, atau klik tombol di bawah untuk menyetujui rencana dan mulai menulis kode nyata di <strong>Build Mode</strong>.
+            </p>
 
             {/* Task Breakdown */}
             <div className="space-y-2">
               <div className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider">
-                Task Dependency Graph:
+                Pembagian Tugas Tim Spesialis:
               </div>
-              {planDocument.tasks.map((task, idx) => (
-                <div
-                  key={task.id}
-                  className="bg-[#1e1e1e] border border-[#333333] rounded-xl p-3 text-xs space-y-1"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-[#ffffff]">
-                      #{idx + 1}. {task.description}
-                    </span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 bg-[#37373d] text-[#4ec9b0] rounded-md">
-                      Assignee: {task.assignedAgentId}
-                    </span>
-                  </div>
-                  {task.rationale && (
-                    <div className="text-[#858585] text-[11px] italic">
-                      Rationale: {task.rationale}
+              {planDocument.tasks.map((task, idx) => {
+                const assignedAgent = availableAgents?.find((a) => a.id === task.assignedAgentId);
+
+                return (
+                  <div
+                    key={task.id}
+                    className="bg-[#1e1e1e] border border-[#333333] rounded-xl p-3 text-xs space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="font-semibold text-[#ffffff]">
+                        #{idx + 1}. {task.description}
+                      </span>
+                      <span
+                        className="text-[10px] font-mono px-2 py-0.5 rounded-md border border-[#37373d] font-semibold"
+                        style={{
+                          backgroundColor: `${assignedAgent?.color || '#37373d'}20`,
+                          color: assignedAgent?.color || '#4ec9b0',
+                        }}
+                      >
+                        Pelaksana: {assignedAgent ? `${assignedAgent.name} (${assignedAgent.role})` : task.assignedAgentId}
+                      </span>
                     </div>
-                  )}
-                  <div className="flex items-center gap-1.5 text-[#4ec9b0] font-medium text-[11px] pt-0.5">
-                    <CheckCircle2 size={12} />
-                    <span>Deviasi Check: {task.successCriteria}</span>
+                    {task.rationale && (
+                      <div className="text-[#858585] text-[11px] italic">
+                        Alasan: {task.rationale}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 text-[#4ec9b0] font-medium text-[11px] pt-0.5">
+                      <CheckCircle2 size={12} className="shrink-0" />
+                      <span>Kriteria Sukses: {task.successCriteria}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* CTA Switch to Build */}
@@ -364,7 +380,7 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
                 onClick={onSwitchToBuild}
                 className="flex items-center gap-2 px-4 py-2 bg-[#0e639c] hover:bg-[#1177bb] active:bg-[#094771] text-white text-xs font-semibold rounded-xl shadow transition-colors cursor-pointer"
               >
-                <span>Setujui & Beralih ke Build Mode</span>
+                <span>Setujui Rencana & Mulai Build Mode</span>
                 <ArrowRight size={13} />
               </button>
             </div>

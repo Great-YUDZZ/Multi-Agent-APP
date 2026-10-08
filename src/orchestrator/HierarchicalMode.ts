@@ -27,7 +27,8 @@ export class HierarchicalMode implements DiscussionStrategy {
     userProfile: UserProfile,
     allMessages: SessionMessage[],
     callbacks: DiscussionCallbacks,
-    mentionedAgentId?: string
+    mentionedAgentId?: string,
+    workspaceContext?: { path: string; files: string[] }
   ): Promise<ModeratorEvaluation> {
     if (activeAgents.length === 0) {
       throw new Error('Tidak ada agent aktif untuk menjalankan HierarchicalMode.');
@@ -42,17 +43,25 @@ export class HierarchicalMode implements DiscussionStrategy {
     const manager = managerIndex >= 0 ? activeAgents[managerIndex] : activeAgents[0];
     const workers = activeAgents.filter((a) => a.id !== manager.id);
 
-    callbacks.onStrategyStatus?.(`[Hierarchical] Manager: ${manager.name} menganalisis instruksi...`);
+    callbacks.onStrategyStatus?.(`[Hierarchical] Manager: ${manager.name} menganalisis instruksi & merancang delegasi...`);
     callbacks.onAgentStartThinking(manager);
+
+    const workspaceInfo = workspaceContext
+      ? `\n[WORKSPACE AKTIF]: ${workspaceContext.path}\n[DAFTAR BERKAS TERSEDIA]:\n${workspaceContext.files.length > 0 ? workspaceContext.files.map((f) => `- ${f}`).join('\n') : '(Workspace masih kosong - siap membuat berkas baru)'}\n`
+      : '';
 
     // Langkah 1: Manager membagi tugas/delegasi ke para pekerja
     const managerDirectivePrompt = {
       role: 'system' as const,
       content: `${manager.instructions}
 Nama pengguna adalah ${userProfile.displayName}.
-Kamu berperan sebagai MANAGER / LEAD ARCHITECT. Tugasmu:
+Kamu berperan sebagai MANAGER / LEAD ARCHITECT dalam tim ini.
+${workspaceInfo}
+PANDUAN DISKUSI:
 1. Pahami tujuan pengguna: "${userPrompt}".
-2. Berikan arahan teknis dan delegasikan sub-tugas spesifik kepada anggota tim: ${workers.map((w) => `${w.name} (${w.role})`).join(', ')}.
+2. Bagikan sub-tugas dan spesialisasi secara adil ke rekan tim: ${workers.map((w) => `${w.name} (${w.role})`).join(', ')}.
+3. Sampaikan dalam 2-4 paragraf yang tajam dan to the point. JANGAN menulis seluruh file kode mentah sekarang (itu tugas Build Mode nanti).
+4. Fokus pada strategi pembagian berkas (siapa membuat berkas apa).
 ${globalSkillRegistry.formatSkillsPrompt(manager.skillIds || [])}`,
     };
 
@@ -98,12 +107,17 @@ ${globalSkillRegistry.formatSkillsPrompt(manager.skillIds || [])}`,
       const workerPrompt = {
         role: 'system' as const,
         content: `${worker.instructions}
+Nama pengguna adalah ${userProfile.displayName}.
 Kamu adalah spesialis: ${worker.role}.
+${workspaceInfo}
 Manajer (${manager.name}) telah memberikan arahan:
 """
 ${managerDirectiveContent}
 """
-Berikan usulan solusi, rancangan kode/arsitektur, dan kriteria sukses sesuai bidangmu.
+PANDUAN DISKUSI:
+1. Berikan usulan, masukan teknis, arsitektur data/layout, atau skenario uji sesuai keahlianmu (${worker.role}).
+2. Tanggapi langsung poin-poin yang disampaikan Manajer.
+3. Sampaikan dalam 2-4 paragraf terfokus. Jangan mencetak kode lengkap ribuan baris di sesi diskusi ini; tentukan saja struktur berkas yang perlu dibuat.
 ${globalSkillRegistry.formatSkillsPrompt(worker.skillIds || [])}
 ${worker.permissions.internetAccess === 'allowed' ? WebTool.SYSTEM_SECURITY_NOTICE : ''}${obsidianNotice}`,
       };
@@ -112,7 +126,7 @@ ${worker.permissions.internetAccess === 'allowed' ? WebTool.SYSTEM_SECURITY_NOTI
         const workerResult = await globalProviderRegistry.sendMessageWithFallback(
           worker.llmProviderId,
           [],
-          [workerPrompt, { role: 'user', content: `Laksanakan arahan teknis terkait: ${userPrompt}` }]
+          [workerPrompt, { role: 'user', content: `Tanggapi arahan manajer terkait: ${userPrompt}` }]
         );
 
         let finalContent = workerResult.response.content;
@@ -191,13 +205,13 @@ ${worker.permissions.internetAccess === 'allowed' ? WebTool.SYSTEM_SECURITY_NOTI
       const synthesisPrompt = {
         role: 'system' as const,
         content: `${manager.instructions}
-Kamu adalah Manager. Anggota timmu telah memberikan laporan teknis berikut:
+Kamu adalah Manager (${manager.name}). Anggota timmu telah memberikan masukan teknis:
 ${currentRoundMessages
   .filter((m) => m.speaker.type === 'agent' && m.speaker.agentId !== manager.id)
   .map((m) => `${m.speaker.type === 'agent' ? m.speaker.agentName : ''}: ${m.content}`)
   .join('\n\n')}
 
-Buat ringkasan arsitektur final yang menyatukan seluruh usulan menjadi rencana eksekusi terpadu.`,
+Buat ringkasan konsolidasi singkat (2-3 paragraf) yang merangkum rencana terpadu sebelum diserahkan ke evaluasi konsensus.`,
       };
 
       try {
@@ -234,7 +248,8 @@ Buat ringkasan arsitektur final yang menyatukan seluruh usulan menjadi rencana e
       combinedMessages,
       activeAgents,
       roundNumber,
-      this.maxRounds
+      this.maxRounds,
+      workspaceContext
     );
 
     callbacks.onRoundComplete(roundNumber, evaluation);

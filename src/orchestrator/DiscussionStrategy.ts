@@ -23,6 +23,7 @@ export interface DiscussionStrategy {
     userProfile: UserProfile,
     allMessages: SessionMessage[],
     callbacks: DiscussionCallbacks,
-    mentionedAgentId?: string
+    mentionedAgentId?: string,
+    workspaceContext?: { path: string; files: string[] }
   ): Promise<ModeratorEvaluation>;
 }

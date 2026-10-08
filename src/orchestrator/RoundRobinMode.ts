@@ -31,7 +31,8 @@ export class RoundRobinMode implements DiscussionStrategy {
     userProfile: UserProfile,
     allMessages: SessionMessage[],
     callbacks: DiscussionCallbacks,
-    mentionedAgentId?: string
+    mentionedAgentId?: string,
+    workspaceContext?: { path: string; files: string[] }
   ): Promise<ModeratorEvaluation> {
     return this.executeRound(
       userPrompt,
@@ -40,7 +41,8 @@ export class RoundRobinMode implements DiscussionStrategy {
       userProfile,
       allMessages,
       callbacks,
-      mentionedAgentId
+      mentionedAgentId,
+      workspaceContext
     );
   }
 
@@ -54,7 +56,8 @@ export class RoundRobinMode implements DiscussionStrategy {
     userProfile: UserProfile,
     allMessages: SessionMessage[],
     callbacks: DiscussionCallbacks,
-    mentionedAgentId?: string
+    mentionedAgentId?: string,
+    workspaceContext?: { path: string; files: string[] }
   ): Promise<ModeratorEvaluation> {
     if (mentionedAgentId) {
       this.turnQueue.requestPriority(mentionedAgentId);
@@ -72,13 +75,27 @@ export class RoundRobinMode implements DiscussionStrategy {
 
       callbacks.onAgentStartThinking(agent);
 
-      // Konteks riwayat percakapan yang aman
+      // Konteks riwayat percakapan yang jelas dengan label speaker
       const conversationContext = [
-        ...allMessages.slice(-8).map((m) => ({
-          role: m.speaker.type === 'user' ? ('user' as const) : ('assistant' as const),
-          content: m.content,
-        })),
-        { role: 'user' as const, content: userPrompt },
+        ...allMessages.slice(-10).map((m) => {
+          if (m.speaker.type === 'user') {
+            return {
+              role: 'user' as const,
+              content: `[Pengguna (${userProfile.displayName})]: ${m.content}`,
+            };
+          }
+          if (m.speaker.type === 'agent') {
+            return {
+              role: 'assistant' as const,
+              content: `[Agen ${m.speaker.agentName}]: ${m.content}`,
+            };
+          }
+          return {
+            role: 'system' as const,
+            content: `[Sistem]: ${m.content}`,
+          };
+        }),
+        { role: 'user' as const, content: `[Pengguna (${userProfile.displayName})]: ${userPrompt}` },
       ];
 
       // Format skill & security guard & Obsidian tool
@@ -92,11 +109,39 @@ export class RoundRobinMode implements DiscussionStrategy {
           ? `\n${ObsidianTool.TOOL_INSTRUCTIONS}`
           : '';
 
+      // Daftar rekan tim
+      const teammates = activeAgents
+        .filter((a) => a.id !== agent.id)
+        .map((a) => `${a.name} (${a.role})`)
+        .join(', ');
+
+      let workspaceNotice = '';
+      if (workspaceContext && workspaceContext.path) {
+        const fileList =
+          workspaceContext.files && workspaceContext.files.length > 0
+            ? workspaceContext.files.slice(0, 30).map((f) => `  - ${f}`).join('\n')
+            : '  (Folder saat ini masih kosong)';
+        workspaceNotice = `\n[KONTEKS WORKSPACE AKTIF]:
+Folder Proyek: "${workspaceContext.path}"
+Berkas/Folder yang sudah ada:
+${fileList}
+Semua usulan dan perencanaan berkas HARUS mengacu pada struktur folder workspace ini!`;
+      }
+
       const agentSystemPrompt = {
         role: 'system' as const,
         content: `${agent.instructions}
-Nama pengguna adalah ${userProfile.displayName}. Diskusi Plan Mode, putaran ${roundNumber}.
-Berikan analisis teknis terstruktur dan kriteria implementasi yang jelas.${skillBlock}${securityNotice}${obsidianNotice}`,
+Nama pengguna adalah ${userProfile.displayName}.
+Kamu sedang berada dalam SESI DISKUSI TIM MULTI-AGENT (Plan Mode), Putaran ${roundNumber}.
+Identitasmu: ${agent.name} — Peran: ${agent.role}.
+Rekan timmu di sesi ini: ${teammates || 'Hanya kamu'}.
+${workspaceNotice}
+
+PANDUAN DISKUSI KOLABORATIF:
+1. JANGAN menulis seluruh kode aplikasi dari nol secara monolog. Fokuslah secara mendalam pada SPESIALISASI PERANMU (${agent.role}).
+2. BACA apa yang disampaikan rekan timmu sebelumnya. TANGGAPI atau KRITIK ide mereka secara langsung (sebut nama peran mereka), lalu lengkapi aspek teknis dari sudut pandang peranmu.
+3. Tulis respon yang padat, fokus, dan komunikatif (2-4 paragraf terarah) agar rekan tim lain dan pengguna bisa menanggapi.
+4. Di akhir, berikan rekomendasi tugas konkret yang perlu dikerjakan oleh peranmu untuk disepakati bersama.${skillBlock}${securityNotice}${obsidianNotice}`,
       };
 
       try {

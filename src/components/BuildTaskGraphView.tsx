@@ -5,7 +5,12 @@ import {
   AlertTriangle, 
   Lock, 
   Loader2, 
-  FileText 
+  FileText,
+  Code,
+  Copy,
+  Check,
+  ExternalLink,
+  Folder
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { PlanDocument, Agent } from '../types';
@@ -14,20 +19,27 @@ import { BuildModeController, type TaskRuntimeState, type BuildRunProgress } fro
 interface BuildTaskGraphViewProps {
   planDocument?: PlanDocument;
   availableAgents: Agent[];
+  workspacePath?: string;
   onSwitchToPlan: () => void;
   onSaveWalkthrough?: (summary: string) => void;
+  onOpenFileInEditor?: (filePath: string) => void;
 }
 
 export const BuildTaskGraphView: React.FC<BuildTaskGraphViewProps> = ({
   planDocument,
   availableAgents,
+  workspacePath,
   onSwitchToPlan,
   onSaveWalkthrough,
+  onOpenFileInEditor,
 }) => {
   const [controller] = useState<BuildModeController | null>(() => {
     if (!planDocument) return null;
-    return new BuildModeController(planDocument, availableAgents);
+    return new BuildModeController(planDocument, availableAgents, workspacePath);
   });
+
+  const [activeFileTabs, setActiveFileTabs] = useState<Record<string, number>>({});
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const [taskStates, setTaskStates] = useState<TaskRuntimeState[]>(() => {
     return controller ? controller.getStates() : [];
@@ -98,16 +110,32 @@ export const BuildTaskGraphView: React.FC<BuildTaskGraphViewProps> = ({
 
   const percentage = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
 
+  const handleCopyCode = (key: string, content: string) => {
+    navigator.clipboard.writeText(content);
+    setCopiedKey(key);
+    setTimeout(() => {
+      setCopiedKey((prev) => (prev === key ? null : prev));
+    }, 2000);
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#1e1e1e] text-[#cccccc] font-sans select-none">
       {/* Top Header & Execution Bar */}
-      <div className="h-12 flex items-center justify-between px-5 bg-[#252526] border-b border-[#2d2d2d]">
+      <div className="h-14 flex items-center justify-between px-5 bg-[#252526] border-b border-[#2d2d2d]">
         <div className="flex items-center gap-3">
           <span className="w-2.5 h-2.5 rounded-full bg-[#4ec9b0]" />
           <div>
-            <h2 className="text-xs font-bold text-[#ffffff] uppercase tracking-wider">
-              Build Mode — Execution Engine
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xs font-bold text-[#ffffff] uppercase tracking-wider">
+                Build Mode — Execution Engine
+              </h2>
+              {workspacePath && (
+                <span className="flex items-center gap-1 text-[10px] bg-[#1e1e1e] text-[#4ec9b0] px-2 py-0.5 rounded border border-[#333333] font-mono truncate max-w-xs">
+                  <Folder size={10} />
+                  {workspacePath}
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-[#858585] truncate max-w-md">
               {planDocument.goal}
             </p>
@@ -159,20 +187,26 @@ export const BuildTaskGraphView: React.FC<BuildTaskGraphViewProps> = ({
         )}
 
         {/* Task Graph Nodes */}
-        <div className="space-y-3">
-          <div className="text-[11px] font-bold text-[#858585] uppercase tracking-wider">
-            Dependency Graph Nodes:
+        <div className="space-y-4">
+          <div className="text-[11px] font-bold text-[#858585] uppercase tracking-wider flex items-center justify-between">
+            <span>Dependency Graph Nodes:</span>
+            <span className="text-[10px] text-[#4ec9b0] normal-case">
+              Kode yang ditulis oleh setiap agen otomatis terhubung ke workspace
+            </span>
           </div>
 
           {taskStates.map((state, idx) => {
             const agent = availableAgents.find((a) => a.id === state.task.assignedAgentId);
+            const files = state.filesWritten || [];
+            const activeTabIndex = activeFileTabs[state.task.id] || 0;
+            const currentFile = files[activeTabIndex] || files[0];
 
             return (
               <div
                 key={state.task.id}
-                className={`bg-[#252526] border rounded p-4 space-y-2.5 transition-colors ${
+                className={`bg-[#252526] border rounded-lg p-4 space-y-3 transition-colors ${
                   state.status === 'running'
-                    ? 'border-[#007acc] shadow-md'
+                    ? 'border-[#007acc] shadow-lg shadow-[#007acc]/10'
                     : state.status === 'completed'
                     ? 'border-[#2e5944]'
                     : state.status === 'deviated'
@@ -226,33 +260,113 @@ export const BuildTaskGraphView: React.FC<BuildTaskGraphViewProps> = ({
                 </div>
 
                 {/* Agent & Success Criteria */}
-                <div className="flex items-center gap-4 text-[11px] text-[#858585]">
-                  <div className="flex items-center gap-1.5">
-                    <span>Assignee:</span>
-                    <span className="font-medium" style={{ color: agent?.color || '#569cd6' }}>
-                      {agent?.name || state.task.assignedAgentId}
+                <div className="flex items-center justify-between text-[11px] text-[#858585] flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span>Pelaksana:</span>
+                    <span className="font-semibold px-2 py-0.5 rounded bg-[#1e1e1e] border border-[#333333]" style={{ color: agent?.color || '#569cd6' }}>
+                      {agent?.name || state.task.assignedAgentId} ({agent?.role || 'Spesialis'})
                     </span>
                   </div>
 
                   {state.task.dependsOn && state.task.dependsOn.length > 0 && (
                     <div className="font-mono text-[10px] text-[#9cdcfe]">
-                      Depends on: [{state.task.dependsOn.join(', ')}]
+                      Bergantung pada: [{state.task.dependsOn.join(', ')}]
                     </div>
                   )}
                 </div>
 
                 <div className="text-[11px] text-[#4ec9b0] bg-[#1e1e1e] p-2 rounded border border-[#333333] flex items-center gap-1.5">
-                  <CheckCircle2 size={12} />
-                  <span>Success Criteria: {state.task.successCriteria}</span>
+                  <CheckCircle2 size={12} className="shrink-0" />
+                  <span>Kriteria Sukses: {state.task.successCriteria}</span>
                 </div>
 
-                {/* Output or Deviation Actions */}
-                {state.output && (
+                {/* LIVE CODE VIEWER: Jika ada berkas yang ditulis oleh agen */}
+                {files.length > 0 && (
+                  <div className="mt-3 border border-[#333333] rounded-lg overflow-hidden bg-[#181818]">
+                    {/* Tab Bar Berkas */}
+                    <div className="flex items-center justify-between bg-[#1f1f1f] px-2 border-b border-[#2d2d2d] overflow-x-auto">
+                      <div className="flex items-center gap-1 py-1">
+                        <span className="text-[10px] font-bold text-[#858585] uppercase tracking-wider px-2 flex items-center gap-1">
+                          <Code size={12} className="text-[#4ec9b0]" />
+                          Berkas Ditulis ({files.length}):
+                        </span>
+                        {files.map((file, fileIdx) => (
+                          <button
+                            key={file.path}
+                            onClick={() =>
+                              setActiveFileTabs((prev) => ({ ...prev, [state.task.id]: fileIdx }))
+                            }
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono transition-colors ${
+                              (activeFileTabs[state.task.id] || 0) === fileIdx
+                                ? 'bg-[#2d2d2d] text-[#ffffff] font-semibold shadow-sm'
+                                : 'text-[#858585] hover:text-[#cccccc] hover:bg-[#252526]'
+                            }`}
+                          >
+                            <FileText size={12} />
+                            <span>{file.path}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Aksi Berkas: Copy & Buka di Editor */}
+                      {currentFile && (
+                        <div className="flex items-center gap-1.5 py-1">
+                          <button
+                            onClick={() => handleCopyCode(`${state.task.id}-${currentFile.path}`, currentFile.content)}
+                            title="Salin Kode Berkas"
+                            className="flex items-center gap-1 px-2 py-0.5 text-[11px] rounded bg-[#252526] hover:bg-[#333333] text-[#cccccc] transition-colors border border-[#3c3c3c]"
+                          >
+                            {copiedKey === `${state.task.id}-${currentFile.path}` ? (
+                              <>
+                                <Check size={11} className="text-[#4ec9b0]" />
+                                <span className="text-[#4ec9b0]">Tersalin</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={11} />
+                                <span>Salin</span>
+                              </>
+                            )}
+                          </button>
+
+                          {onOpenFileInEditor && workspacePath && (
+                            <button
+                              onClick={() => {
+                                const cleanPath = currentFile.path.replace(/^[/\\]+/, '');
+                                const full = workspacePath.endsWith('/') || workspacePath.endsWith('\\')
+                                  ? `${workspacePath}${cleanPath}`
+                                  : `${workspacePath}/${cleanPath}`;
+                                onOpenFileInEditor(full);
+                              }}
+                              title="Buka Berkas di Editor"
+                              className="flex items-center gap-1 px-2 py-0.5 text-[11px] rounded bg-[#0e639c]/30 hover:bg-[#0e639c] text-[#9cdcfe] hover:text-white transition-colors border border-[#0e639c]/50"
+                            >
+                              <ExternalLink size={11} />
+                              <span>Buka Editor</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Preview Konten Kode */}
+                    {currentFile && (
+                      <div className="relative p-3 font-mono text-xs text-[#d4d4d4] bg-[#141414] overflow-x-auto max-h-72 select-text">
+                        <pre className="leading-relaxed whitespace-pre font-mono">
+                          {currentFile.content}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Execution Output Text / Logs */}
+                {state.output && files.length === 0 && (
                   <div className="bg-[#1e1e1e] p-2.5 rounded text-xs border border-[#333333] text-[#cccccc]">
                     <div className="text-[10px] font-bold text-[#858585] uppercase mb-1">
-                      Execution Output:
+                      Keluaran Tugas:
                     </div>
-                    <div className="text-xs font-mono text-[#9cdcfe] leading-relaxed">
+                    <div className="text-xs font-mono text-[#9cdcfe] leading-relaxed whitespace-pre-wrap">
                       {state.output}
                     </div>
                   </div>
